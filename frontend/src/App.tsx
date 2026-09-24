@@ -165,96 +165,102 @@ export const App: React.FC = () => {
 
           {/* Desktop Right Controls */}
           <div className="hidden md:flex items-center space-x-3">
-            {/* LAPTOP HOST STREAM TOGGLE SWITCH */}
-            <div className="flex items-center space-x-2.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 border border-indigo-200 text-xs shadow-2xs">
-              <div className="flex items-center space-x-1.5 text-indigo-950 font-bold font-mono">
-                <Laptop className="w-4 h-4 text-indigo-600" />
-                <span className="hidden xl:inline">Host:</span>
-                <span>{hostInfo?.hostname || 'Laptop'}</span>
-              </div>
-              <button
-                onClick={toggleHostLogs}
-                role="switch"
-                aria-checked={hostStreaming}
-                className={hostStreaming ? "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600 shadow-xs" : "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-slate-300"}
-                title="Toggle real-time laptop system log streaming"
-              >
-                <span
-                  className={hostStreaming ? "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out translate-x-5" : "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out translate-x-0"}
-                />
-              </button>
-              <span className={hostStreaming ? "text-[11px] font-mono font-bold text-indigo-700" : "text-[11px] font-mono font-bold text-slate-500"}>
-                {hostStreaming ? 'ON' : 'OFF'}
-              </span>
-            </div>
-
-            {/* INSTANT DEMO MODE TOGGLE SWITCH */}
-            <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                Live Demo:
-              </span>
-              <button
-                onClick={() => setInstantDemoMode(!instantDemoMode)}
-                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  instantDemoMode ? 'bg-blue-600' : 'bg-slate-300'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    instantDemoMode ? 'translate-x-5' : 'translate-x-0'
+            {/* Unified System Controls Segment */}
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 space-x-1 shadow-2xs">
+              {/* Laptop Stream Switch */}
+              <div className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs">
+                <Laptop className="w-3.5 h-3.5 text-slate-600" />
+                <span className="font-semibold text-slate-700">Laptop Logs</span>
+                <button
+                  type="button"
+                  onClick={toggleHostLogs}
+                  role="switch"
+                  aria-checked={hostStreaming}
+                  className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    hostStreaming ? 'bg-blue-600' : 'bg-slate-300'
                   }`}
-                />
-              </button>
-              <span className="text-xs font-mono font-bold text-blue-700">
-                {instantDemoMode ? 'ACTIVE' : 'PAUSED'}
-              </span>
+                  title="Toggle real-time laptop system log streaming"
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      hostStreaming ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="h-4 w-px bg-slate-200" />
+
+              {/* Demo Mode Switch */}
+              <div className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs">
+                <Sparkles className="w-3.5 h-3.5 text-slate-600" />
+                <span className="font-semibold text-slate-700">Demo Stream</span>
+                <button
+                  type="button"
+                  onClick={() => setInstantDemoMode(!instantDemoMode)}
+                  role="switch"
+                  aria-checked={instantDemoMode}
+                  className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    instantDemoMode ? 'bg-blue-600' : 'bg-slate-300'
+                  }`}
+                  title="Toggle synthetic log generator"
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      instantDemoMode ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
-            {/* Tab Navigation Controls */}
-            <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-1">
+            {/* Standardized Tab Navigation Controls */}
+            <nav className="flex bg-slate-100 border border-slate-200 rounded-lg p-1">
               <button
+                type="button"
                 onClick={() => setActiveTab('soc')}
-                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'soc'
-                    ? 'bg-white text-blue-700 shadow-xs'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Radio className="w-3.5 h-3.5" />
+                <Radio className="w-3.5 h-3.5 text-blue-600" />
                 <span>SOC Operations</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('mapper')}
-                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'mapper'
-                    ? 'bg-white text-blue-700 shadow-xs'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
                 <span>AI Schema Studio</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('provenance')}
-                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'provenance'
-                    ? 'bg-white text-blue-700 shadow-xs'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Fingerprint className="w-3.5 h-3.5" />
+                <Fingerprint className="w-3.5 h-3.5 text-blue-600" />
                 <span>Air-Gap Provenance</span>
               </button>
-            </div>
+            </nav>
 
-            {/* Connection Status Pill */}
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
-              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-emerald-800 font-bold font-mono text-xs">
-                {isStreaming ? 'VECTOR LIVE' : 'SYNTHETIC STREAM'}
+            {/* Connection Status Indicator */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-emerald-800 font-mono font-bold text-[11px] uppercase tracking-wider">
+                {isStreaming ? 'Vector Live' : 'Synthetic Active'}
               </span>
             </div>
           </div>

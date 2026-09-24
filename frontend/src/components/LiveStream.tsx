@@ -98,77 +98,98 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
   return (
     <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       {/* Top Filter & Search Bar */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-4">
-        {/* Quick Filter Buttons */}
-        <div className="flex items-center space-x-2 flex-wrap">
-          <span className="text-xs text-slate-500 mr-1 flex items-center gap-1 font-mono uppercase font-bold">
-            <Filter className="w-3.5 h-3.5 text-blue-600" />
+      <div className="p-3.5 border-b border-slate-200 bg-slate-50/80 flex flex-wrap items-center justify-between gap-3">
+        {/* Unified Segmented Filter Control */}
+        <div className="flex items-center space-x-1.5 flex-wrap">
+          <span className="text-[11px] text-slate-500 mr-1.5 flex items-center gap-1 font-mono uppercase font-bold">
+            <Filter className="w-3.5 h-3.5 text-slate-500" />
             Views:
           </span>
-          <button
-            onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterMode === 'all'
-                ? 'bg-blue-600 text-white shadow-sm font-bold'
-                : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            All Events ({logs.length})
-          </button>
-          <button
-            onClick={() => setFilterMode('laptop')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-              filterMode === 'laptop'
-                ? 'bg-indigo-600 text-white shadow-sm font-bold'
-                : 'bg-white text-indigo-700 hover:text-indigo-900 border border-indigo-200 hover:bg-indigo-50'
-            }`}
-          >
-            <Laptop className="w-3.5 h-3.5" />
-            <span>My Laptop Logs</span>
-          </button>
-          <button
-            onClick={() => setFilterMode('threats')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-              filterMode === 'threats'
-                ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : 'bg-white text-rose-700 hover:text-rose-900 border border-rose-200 hover:bg-rose-50'
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Threats (APT29)</span>
-          </button>
-          <button
-            onClick={() => setFilterMode('pii')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-              filterMode === 'pii'
-                ? 'bg-amber-600 text-white shadow-sm font-bold'
-                : 'bg-white text-amber-800 hover:text-amber-950 border border-amber-200 hover:bg-amber-50'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>PII Intercepted</span>
-          </button>
-          <button
-            onClick={() => setFilterMode('blocks')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterMode === 'blocks'
-                ? 'bg-purple-600 text-white shadow-sm font-bold'
-                : 'bg-white text-purple-700 hover:text-purple-900 border border-purple-200 hover:bg-purple-50'
-            }`}
-          >
-            Network Blocks
-          </button>
+
+          <div className="flex bg-slate-200/70 p-1 rounded-lg border border-slate-200/80 space-x-1">
+            <button
+              type="button"
+              onClick={() => setFilterMode('all')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterMode === 'all'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>All Events</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                filterMode === 'all' ? 'bg-slate-100 text-slate-700' : 'bg-slate-300/50 text-slate-600'
+              }`}>
+                {logs.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('laptop')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterMode === 'laptop'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <Laptop className="w-3.5 h-3.5 text-slate-600" />
+              <span>Laptop Logs</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('threats')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterMode === 'threats'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <ShieldAlert className="w-3.5 h-3.5 text-slate-600" />
+              <span>Threat Alerts</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('pii')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterMode === 'pii'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <Lock className="w-3.5 h-3.5 text-slate-600" />
+              <span>Aadhaar Scrubbed</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('blocks')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterMode === 'blocks'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-slate-500" />
+              <span>Firewall Blocks</span>
+            </button>
+          </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar matching exact height */}
         <div className="relative flex items-center">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search IP, actor, payload..."
+            placeholder="Filter IP, actor, payload..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-9 pr-3.5 py-2 rounded-lg text-slate-900 placeholder-slate-400 w-56 md:w-72 transition-all outline-none"
+            className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-8.5 pr-3 py-1.5 rounded-lg text-slate-900 placeholder-slate-400 w-56 md:w-64 transition-all outline-none"
           />
         </div>
       </div>
