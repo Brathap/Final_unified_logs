@@ -17,6 +17,7 @@ import { TelemetryMetrics } from './components/TelemetryMetrics';
 import { AiMapper } from './components/AiMapper';
 import { AirGapProvenance } from './components/AirGapProvenance';
 import { LogDrawer } from './components/LogDrawer';
+import { ULPFLogo } from './components/ULPFLogo';
 import { generateSyntheticLog } from './mockGenerator';
 import type { ULPFLogRecord } from './types';
 
@@ -128,16 +129,10 @@ export const App: React.FC = () => {
       {/* Top Professional Header (Clean Solid White Enterprise Bar) */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-40 px-4 sm:px-6 py-3 shadow-xs">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          {/* Left Branding with Minimal PS Logo */}
+          {/* Left Branding with Native Scalable ULPF Logo */}
           <div className="flex items-center space-x-3.5">
             <div className="relative group cursor-pointer">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-xs border border-blue-200/80 bg-slate-900 flex items-center justify-center">
-                <img 
-                  src="/logo.jpg" 
-                  alt="ULPF Minimal Logo" 
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
+              <ULPFLogo size={42} className="shadow-xs transition-transform duration-300 group-hover:scale-105" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600" />
