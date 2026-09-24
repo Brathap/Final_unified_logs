@@ -16,73 +16,66 @@ export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 36 }) => 
       className={className}
     >
       <defs>
-        {/* Vibrant Electric Blue-to-Cyan Gradient for Left "U" Stem */}
-        <linearGradient id="ulpfGradLeft" x1="6" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+        {/* Shield Gradient */}
+        <linearGradient id="shieldFillGrad" x1="24" y1="4" x2="24" y2="44" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#1e40af" />
         </linearGradient>
 
-        {/* Vibrant Royal Indigo-to-Blue Gradient for Right Shield Wing */}
-        <linearGradient id="ulpfGradRight" x1="42" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3b82f6" />
+        <linearGradient id="shieldBorderGrad" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#60a5fa" />
           <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
 
-        {/* Neon Core Glow for Center Ingestion Point */}
-        <filter id="coreGlow" x="-20%" y="-20%" width="140%" height="140%">
+        {/* Glow */}
+        <filter id="laserGlow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#38bdf8" floodOpacity="0.8" />
         </filter>
       </defs>
 
-      {/* 
-        THE CRAZY / UNIQUE ULPF MONOGRAM SHIELD:
-        - An ultra-bold, geometric, interlocking "U" representing Universal Log Framework
-        - The bottom tapers into an impenetrable defense shield crest
-        - The negative space inside houses the live terminal log pipeline bracket `>_`
-      */}
-
-      {/* Left Wing / Left "U" Arm with Beveled Cyber Cut */}
+      {/* 1. Clear Cybersecurity Defense Shield */}
       <path
-        d="M8 8H16V26C16 30.5 19.5 34 24 34V42C14 42 8 35 8 26V8Z"
-        fill="url(#ulpfGradLeft)"
+        d="M24 4L42 11V23C42 34 34.5 41.5 24 44C13.5 41.5 6 34 6 23V11L24 4Z"
+        fill="url(#shieldFillGrad)"
+        stroke="url(#shieldBorderGrad)"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
 
-      {/* Right Wing / Right Shield Arm with Angular Facet */}
+      {/* 2. Three Incoming Raw Log Streams on the Left */}
+      {/* Top Stream */}
       <path
-        d="M40 8H32V26C32 30.5 28.5 34 24 34V42C34 42 40 35 40 26V8Z"
-        fill="url(#ulpfGradRight)"
+        d="M12 17H19L24 22H32"
+        stroke="#7dd3fc"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-
-      {/* Top Cyber Defense Bar linking the structure */}
-      <rect x="18" y="8" width="12" height="4.5" rx="2" fill="#2563eb" />
-
-      {/* Converging Log Stream Data Tracks (Horizontal Beams crossing into the Shield) */}
-      <rect x="4" y="14" width="7" height="3" rx="1.5" fill="#0284c7" />
-      <rect x="2" y="20" width="9" height="3" rx="1.5" fill="#38bdf8" filter="url(#coreGlow)" />
-      <rect x="4" y="26" width="7" height="3" rx="1.5" fill="#0284c7" />
-
-      {/* Center Console Terminal Prompt `> _` (Representing Real-time Log Stream Engine) */}
-      {/* The `>` Symbol */}
+      {/* Middle Stream */}
       <path
-        d="M20 18L24.5 22L20 26"
+        d="M10 24H33"
         stroke="#ffffff"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        filter="url(#laserGlow)"
+      />
+      {/* Bottom Stream */}
+      <path
+        d="M12 31H19L24 26H32"
+        stroke="#7dd3fc"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
 
-      {/* The Cursor `_` */}
-      <path
-        d="M26 26H29.5"
-        stroke="#38bdf8"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        filter="url(#coreGlow)"
-      />
+      {/* 3. Ingestion Dots on Left */}
+      <circle cx="12" cy="17" r="1.8" fill="#38bdf8" />
+      <circle cx="10" cy="24" r="2" fill="#ffffff" />
+      <circle cx="12" cy="31" r="1.8" fill="#38bdf8" />
 
-      {/* Bottom Shield Anchor Node (Deterministic Non-Repudiation Seal) */}
-      <circle cx="24" cy="42" r="2.5" fill="#2563eb" />
-      <circle cx="24" cy="42" r="1.2" fill="#ffffff" />
+      {/* 4. Single Unified Standardized Output Core (Right) */}
+      <circle cx="34" cy="24" r="3.2" fill="#38bdf8" filter="url(#laserGlow)" />
+      <circle cx="34" cy="24" r="1.5" fill="#ffffff" />
     </svg>
   );
 };
