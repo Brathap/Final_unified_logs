@@ -10,99 +10,70 @@ export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 36 }) => 
     <svg
       width={size}
       height={size}
-      viewBox="0 0 100 100"
+      viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
       <defs>
-        {/* Outer Shield Gradient */}
-        <linearGradient id="shieldGrad" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+        {/* Shield Gradient */}
+        <linearGradient id="ulpfShieldGrad" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+
+        {/* Stream Gradient */}
+        <linearGradient id="ulpfStreamGrad" x1="8" y1="24" x2="38" y2="24" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#0284c7" />
           <stop offset="100%" stopColor="#2563eb" />
         </linearGradient>
-
-        {/* Data Stream Gradient */}
-        <linearGradient id="streamGrad" x1="0" y1="50" x2="60" y2="50" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#06b6d4" />
-        </linearGradient>
-
-        {/* Glow Filter */}
-        <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#38bdf8" floodOpacity="0.6" />
-        </filter>
       </defs>
 
-      {/* Background Dark Container */}
-      <rect width="100" height="100" rx="22" fill="#0f172a" />
-      <rect width="100" height="100" rx="22" stroke="#334155" strokeWidth="2" />
-
-      {/* Cyber Defense Shield Outline */}
+      {/* Cyber Security Shield (Transparent background, clean modern 2.5px vector stroke) */}
       <path
-        d="M50 14L82 24V48C82 68 67 83 50 88C33 83 18 68 18 48V24L50 14Z"
-        fill="#1e293b"
-        stroke="url(#shieldGrad)"
-        strokeWidth="3.5"
+        d="M24 5L41 11.5V23C41 33.5 33.7 42 24 45C14.3 42 7 33.5 7 23V11.5L24 5Z"
+        fill="#eff6ff"
+        stroke="url(#ulpfShieldGrad)"
+        strokeWidth="2.5"
         strokeLinejoin="round"
       />
 
-      {/* Inner Shield Accent */}
+      {/* Converging Multi-source Log Streams into Unified Pipeline */}
+      {/* Stream 1 - Top source (Cisco/Firewall) */}
       <path
-        d="M50 22L74 30V48C74 63 63 75 50 79C37 75 26 63 26 48V30L50 22Z"
-        fill="#0f172a"
-        stroke="#1e3a8a"
-        strokeWidth="2"
+        d="M13 18H20L25 24H33"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
 
-      {/* Converging Log Streams (Multi-source Ingestion) */}
-      {/* Stream 1 - Top */}
+      {/* Stream 2 - Middle source (Linux/SSHD direct pipeline) */}
       <path
-        d="M26 38H44L52 46H66"
-        stroke="#38bdf8"
-        strokeWidth="3"
+        d="M11 24H34"
+        stroke="#0284c7"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter="url(#cyanGlow)"
-      />
-      {/* Stream 2 - Mid Top */}
-      <path
-        d="M23 44H45L52 48H68"
-        stroke="#22d3ee"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Stream 3 - Center */}
-      <path
-        d="M20 50H70"
-        stroke="#60a5fa"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Stream 4 - Mid Bottom */}
-      <path
-        d="M23 56H45L52 52H68"
-        stroke="#22d3ee"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Stream 5 - Bottom */}
-      <path
-        d="M26 62H44L52 54H66"
-        stroke="#38bdf8"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#cyanGlow)"
       />
 
-      {/* Central Unified Lossless Output Crystal Core / Node */}
-      <circle cx="70" cy="50" r="4.5" fill="#ffffff" filter="url(#cyanGlow)" />
-      <circle cx="70" cy="50" r="2.5" fill="#0284c7" />
+      {/* Stream 3 - Bottom source (WAF/CEF) */}
+      <path
+        d="M13 30H20L25 24H33"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Ingestion Source Nodes (3 incoming dots) */}
+      <circle cx="13" cy="18" r="1.5" fill="#3b82f6" />
+      <circle cx="11" cy="24" r="1.5" fill="#0284c7" />
+      <circle cx="13" cy="30" r="1.5" fill="#3b82f6" />
+
+      {/* Central Lossless Unified Output Core */}
+      <circle cx="34" cy="24" r="2.8" fill="#2563eb" />
+      <circle cx="34" cy="24" r="1.2" fill="#ffffff" />
     </svg>
   );
 };
