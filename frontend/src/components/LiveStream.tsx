@@ -29,41 +29,43 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredLogs = logs.filter(log => {
-    const norm = log?.normalized_data as any;
-    const trace = log?.traceability as any;
-    const isMalicious = norm?.enrichment?.is_malicious || norm?.threat?.is_malicious;
-    const piiRedacted = norm?.compliance?.pii_redacted || trace?.redacted_payload;
-    const isLaptop = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
+  const filteredLogs = React.useMemo(() => {
+    return logs.filter(log => {
+      const norm = log?.normalized_data as any;
+      const trace = log?.traceability as any;
+      const isMalicious = norm?.enrichment?.is_malicious || norm?.threat?.is_malicious;
+      const piiRedacted = norm?.compliance?.pii_redacted || trace?.redacted_payload;
+      const isLaptop = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
 
-    if (filterMode === 'laptop' && !isLaptop) {
-      return false;
-    }
-    if (filterMode === 'threats' && !isMalicious) {
-      return false;
-    }
-    if (filterMode === 'pii' && !piiRedacted) {
-      return false;
-    }
-    if (filterMode === 'blocks') {
-      const act = (norm?.activity_name || '').toLowerCase();
-      const raw = (trace?.sanitized_raw || '').toLowerCase();
-      if (!act.includes('block') && !act.includes('denied') && !raw.includes('denied') && !raw.includes('block')) {
+      if (filterMode === 'laptop' && !isLaptop) {
         return false;
       }
-    }
+      if (filterMode === 'threats' && !isMalicious) {
+        return false;
+      }
+      if (filterMode === 'pii' && !piiRedacted) {
+        return false;
+      }
+      if (filterMode === 'blocks') {
+        const act = (norm?.activity_name || '').toLowerCase();
+        const raw = (trace?.sanitized_raw || '').toLowerCase();
+        if (!act.includes('block') && !act.includes('denied') && !raw.includes('denied') && !raw.includes('block')) {
+          return false;
+        }
+      }
 
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const raw = (trace?.sanitized_raw || '').toLowerCase();
-      const src = (norm?.src_endpoint?.ip || '').toLowerCase();
-      const dst = (norm?.dst_endpoint?.ip || '').toLowerCase();
-      const cat = (norm?.category_name || '').toLowerCase();
-      const actor = (norm?.enrichment?.threat_actor || norm?.threat?.actor || '').toLowerCase();
-      return raw.includes(term) || src.includes(term) || dst.includes(term) || cat.includes(term) || actor.includes(term);
-    }
-    return true;
-  });
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const raw = (trace?.sanitized_raw || '').toLowerCase();
+        const src = (norm?.src_endpoint?.ip || '').toLowerCase();
+        const dst = (norm?.dst_endpoint?.ip || '').toLowerCase();
+        const cat = (norm?.category_name || '').toLowerCase();
+        const actor = (norm?.enrichment?.threat_actor || norm?.threat?.actor || '').toLowerCase();
+        return raw.includes(term) || src.includes(term) || dst.includes(term) || cat.includes(term) || actor.includes(term);
+      }
+      return true;
+    });
+  }, [logs, filterMode, searchTerm]);
 
   const getSeverityBadge = (severity: string) => {
     switch (severity.toLowerCase()) {

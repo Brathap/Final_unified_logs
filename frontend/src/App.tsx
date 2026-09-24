@@ -65,20 +65,20 @@ export const App: React.FC = () => {
     }
   };
 
-  // 1. Instant Demo Mode Generator (Smooth 900ms cadence to keep browser snappy)
+  // 1. Instant Demo Mode Generator (Smooth, non-blocking 1400ms cadence)
   useEffect(() => {
     if (!instantDemoMode) return;
 
     const demoInterval = setInterval(() => {
       const newLog = generateSyntheticLog();
-      setLogs(prev => [newLog, ...prev.slice(0, 79)]);
+      setLogs(prev => [newLog, ...prev.slice(0, 49)]);
       logCountRef.current += 1;
-    }, 900);
+    }, 1400);
 
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
 
-  // 2. Real SSE Stream from FastAPI Backend (if running concurrently)
+  // 2. Real SSE Stream from FastAPI Backend (Throttled for browser responsiveness)
   useEffect(() => {
     let eventSource: EventSource | null = null;
 
@@ -93,7 +93,7 @@ export const App: React.FC = () => {
         try {
           const record: ULPFLogRecord = JSON.parse(event.data);
           record.id = record.id || `live-${Date.now()}-${Math.random()}`;
-          setLogs(prev => [record, ...prev.slice(0, 149)]);
+          setLogs(prev => [record, ...prev.slice(0, 49)]);
           logCountRef.current += 1;
         } catch (e) {
           console.error("Error parsing live SSE event", e);
@@ -103,7 +103,7 @@ export const App: React.FC = () => {
       eventSource.onerror = () => {
         setIsStreaming(false);
         if (eventSource) eventSource.close();
-        setTimeout(connectSSE, 3500);
+        setTimeout(connectSSE, 4000);
       };
     };
 
