@@ -44,10 +44,11 @@ function pseudoHash(str: string): string {
 }
 
 export function generateSyntheticLog(): ULPFLogRecord {
-  const isMalicious = Math.random() < 0.28;
-  const hasAadhaar = Math.random() < 0.32;
-  const isCisco = Math.random() < 0.35;
-  const isImperva = !isCisco && Math.random() < 0.5;
+  const isLaptopHost = Math.random() < 0.25;
+  const isMalicious = !isLaptopHost && Math.random() < 0.28;
+  const hasAadhaar = !isLaptopHost && Math.random() < 0.32;
+  const isCisco = !isLaptopHost && Math.random() < 0.45;
+  const isImperva = !isLaptopHost && !isCisco && Math.random() < 0.6;
 
   const now = new Date();
   const timestamp = now.toISOString();
@@ -110,6 +111,29 @@ export function generateSyntheticLog(): ULPFLogRecord {
       severity = 'Critical';
       severityId = 5;
     }
+  } else if (isLaptopHost) {
+    const daemons = ['systemd', 'kernel', 'NetworkManager', 'pipewire', 'sshd', 'dbus-daemon'];
+    const dName = daemons[Math.floor(Math.random() * daemons.length)];
+    const pid = Math.floor(Math.random() * 4000) + 500;
+    const actions = [
+      'Started User Manager for UID 1000.',
+      'wlan0: Link confirmed up and route configured.',
+      'session-c1.scope: Deactivated successfully.',
+      'CPU frequency scaling governor set to performance.',
+      'IPC socket connection established from /run/user/1000/bus'
+    ];
+    const logMsg = actions[Math.floor(Math.random() * actions.length)];
+    rawString = `[HOST:archlinux] ${now.toDateString().slice(4, 10)} ${now.toLocaleTimeString()} archlinux ${dName}[${pid}]: ${logMsg}`;
+    sanitizedRaw = rawString;
+    srcIp = '127.0.0.1';
+    srcGeo = 'Laptop: archlinux';
+    dstIp = '127.0.0.1';
+    dstGeo = 'Local Host';
+    ocsfClass = 1001;
+    categoryName = 'Host System';
+    activityName = `${dName}: System Routine`;
+    severity = 'Informational';
+    severityId = 1;
   } else {
     // Linux Auth / SSHD
     const user = ['root', 'admin', 'secops', 'svc_db', 'deployer'][Math.floor(Math.random() * 5)];
@@ -148,11 +172,11 @@ export function generateSyntheticLog(): ULPFLogRecord {
       metadata: {
         version: '1.1.0',
         product: {
-          vendor_name: 'ULPF Gateway',
-          name: 'Enterprise Universal Parser',
+          vendor_name: isLaptopHost ? 'ULPF Host Agent' : 'ULPF Gateway',
+          name: isLaptopHost ? 'Local Host Engine (archlinux)' : 'Enterprise Universal Parser',
         },
-        source_type: isCisco ? 'cisco_asa' : isImperva ? 'imperva_waf' : 'linux_auth',
-        wire_format: isCisco ? 'SYSLOG' : isImperva ? 'CEF' : 'SYSLOG',
+        source_type: isLaptopHost ? 'laptop_host' : isCisco ? 'cisco_asa' : isImperva ? 'imperva_waf' : 'linux_auth',
+        wire_format: isLaptopHost ? 'SYSTEMD_JOURNAL' : isCisco ? 'SYSLOG' : isImperva ? 'CEF' : 'SYSLOG',
       },
       class_uid: ocsfClass,
       category_name: categoryName,

@@ -35,10 +35,10 @@ export const App: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logCountRef = useRef(0);
 
-  // Initialize with initial batch of high-fidelity synthetic logs
+  // Initialize with initial batch of high-fidelity logs across all categories
   useEffect(() => {
     const seed: ULPFLogRecord[] = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 35; i++) {
       seed.push(generateSyntheticLog());
     }
     setLogs(seed);

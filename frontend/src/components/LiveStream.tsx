@@ -346,6 +346,17 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                 </tr>
               );
             })}
+            {filteredLogs.length === 0 && (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-slate-500 bg-white">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Laptop className="w-8 h-8 text-slate-400 stroke-[1.5]" />
+                    <p className="text-xs font-semibold text-slate-700">No events found matching active filter</p>
+                    <p className="text-[11px] text-slate-400 font-sans">Toggle Demo Stream or Laptop Logs to stream live events</p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
