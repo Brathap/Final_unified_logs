@@ -9,7 +9,8 @@ import {
   Fingerprint,
   Clock,
   Menu,
-  X
+  X,
+  Laptop
 } from 'lucide-react';
 import { LiveStream } from './components/LiveStream';
 import { TelemetryMetrics } from './components/TelemetryMetrics';
@@ -24,6 +25,8 @@ export const App: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTab, setActiveTab] = useState<'soc' | 'mapper' | 'provenance'>('soc');
   const [selectedLog, setSelectedLog] = useState<ULPFLogRecord | null>(null);
+  const [hostStreaming, setHostStreaming] = useState(true);
+  const [hostInfo, setHostInfo] = useState<{ hostname: string; ip: string } | null>(null);
   
   // Instant Demo Mode Toggle (enabled by default for immediate presentation)
   const [instantDemoMode, setInstantDemoMode] = useState(true);
@@ -38,7 +41,28 @@ export const App: React.FC = () => {
       seed.push(generateSyntheticLog());
     }
     setLogs(seed);
+
+    // Fetch local laptop host metadata
+    fetch('http://localhost:8000/api/host-stream/status')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.hostname) {
+          setHostInfo({ hostname: data.hostname, ip: data.ip });
+          setHostStreaming(Boolean(data.active));
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const toggleHostLogs = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/host-stream/toggle', { method: 'POST' });
+      const data = await res.json();
+      setHostStreaming(Boolean(data.active));
+    } catch (e) {
+      setHostStreaming(!hostStreaming);
+    }
+  };
 
   // 1. Instant Demo Mode Generator (Smooth 900ms cadence to keep browser snappy)
   useEffect(() => {
@@ -141,6 +165,21 @@ export const App: React.FC = () => {
 
           {/* Desktop Right Controls */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* LAPTOP HOST STREAM TOGGLE */}
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-indigo-50/70 border border-indigo-200 text-xs">
+              <button 
+                onClick={toggleHostLogs}
+                className="flex items-center space-x-1.5 cursor-pointer font-bold text-indigo-900 hover:text-indigo-700 transition"
+                title="Live stream journal logs from this computer"
+              >
+                <Laptop className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Laptop ({hostInfo?.hostname || 'Local'}):</span>
+                <span className={hostStreaming ? "px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-600 text-white" : "px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 text-slate-600"}>
+                  {hostStreaming ? 'LIVE' : 'OFF'}
+                </span>
+              </button>
+            </div>
+
             {/* INSTANT DEMO MODE TOGGLE SWITCH */}
             <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
               <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">

@@ -18,7 +18,10 @@ import datetime
 import hashlib
 import json
 import os
+import platform
 import re
+import socket
+import subprocess
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +47,26 @@ app.add_middleware(
 subscribers: List[asyncio.Queue] = []
 recent_logs: List[Dict[str, Any]] = []
 MAX_RECENT = 100
+
+# Laptop/Host Live Log Streaming State
+HOST_LOGS_ACTIVE = True
+host_stream_task: Optional[asyncio.Task] = None
+LOCAL_HOSTNAME = socket.gethostname()
+LOCAL_OS = platform.platform()
+
+
+def get_machine_ip() -> str:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+LOCAL_IP = get_machine_ip()
 
 # Threat intel cache
 THREAT_INTEL: Dict[str, Dict[str, str]] = {}
@@ -237,7 +260,7 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
             print(f"[UDP RECEIVE ERROR] {e}")
 
 
-async def process_and_broadcast(raw_msg: str):
+async def process_and_broadcast(raw_msg: str, source_type: str = "syslog_network"):
     # 1. Base64 & SHA-256
     b64_raw = base64.b64encode(raw_msg.encode("utf-8")).decode("utf-8")
     raw_sha256 = hashlib.sha256(raw_msg.encode("utf-8")).hexdigest()
@@ -248,8 +271,8 @@ async def process_and_broadcast(raw_msg: str):
 
     # 3. Extract IP addresses
     ips = re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", sanitized_msg)
-    src_ip = "0.0.0.0"
-    dst_ip = "0.0.0.0"
+    src_ip = LOCAL_IP if source_type == "laptop_host" else "0.0.0.0"
+    dst_ip = "127.0.0.1" if source_type == "laptop_host" else "0.0.0.0"
 
     cisco_m = re.search(r"src [^:]+:([^/]+)/\d+ dst [^:]+:([^/]+)/\d+", sanitized_msg)
     if cisco_m:
@@ -279,18 +302,31 @@ async def process_and_broadcast(raw_msg: str):
     severity_name = "Informational"
 
     lower = sanitized_msg.lower()
-    if any(k in lower for k in ["denied", "blocked", "failed"]):
-        severity_id = 4
-        severity_name = "High"
-        activity_name = "Connection Blocked / Auth Failed"
-    if "sshd" in lower or "password" in lower:
-        ocsf_class_uid = 3002
-        category_name = "Identity & Access Management"
-        activity_name = "User Authentication"
-    if "cef:" in lower or "imperva" in lower:
-        ocsf_class_uid = 2001
-        category_name = "Security Finding"
-        activity_name = "WAF Signature Inspection"
+    if source_type == "laptop_host":
+        ocsf_class_uid = 1001  # Operating System / Host System Activity
+        category_name = "System Activity"
+        activity_name = f"Host Event ({LOCAL_HOSTNAME})"
+        if any(k in lower for k in ["fail", "error", "fault", "warn", "critical"]):
+            severity_id = 4
+            severity_name = "High"
+            activity_name = "System Service Warning / Failure"
+        elif any(k in lower for k in ["restart", "started", "active"]):
+            severity_id = 1
+            severity_name = "Informational"
+            activity_name = "Service State Transition"
+    else:
+        if any(k in lower for k in ["denied", "blocked", "failed"]):
+            severity_id = 4
+            severity_name = "High"
+            activity_name = "Connection Blocked / Auth Failed"
+        if "sshd" in lower or "password" in lower:
+            ocsf_class_uid = 3002
+            category_name = "Identity & Access Management"
+            activity_name = "User Authentication"
+        if "cef:" in lower or "imperva" in lower:
+            ocsf_class_uid = 2001
+            category_name = "Security Finding"
+            activity_name = "WAF Signature Inspection"
 
     if is_malicious:
         severity_id = 5
@@ -298,6 +334,7 @@ async def process_and_broadcast(raw_msg: str):
 
     # Build final OCSF JSON document
     record = {
+        "id": f"rec-{int(datetime.datetime.now().timestamp() * 1000)}-{os.urandom(3).hex()}",
         "traceability": {
             "raw_sha256": raw_sha256,
             "raw_base64": b64_raw,
@@ -308,17 +345,25 @@ async def process_and_broadcast(raw_msg: str):
             "metadata": {
                 "version": "1.1.0",
                 "product": {
-                    "vendor_name": "ULPF Gateway",
-                    "name": "Enterprise Universal Parser",
+                    "vendor_name": "ULPF Host Agent" if source_type == "laptop_host" else "ULPF Gateway",
+                    "name": f"Local Host Engine ({LOCAL_HOSTNAME})" if source_type == "laptop_host" else "Enterprise Universal Parser",
                 },
+                "source_type": source_type,
+                "wire_format": "SYSTEMD_JOURNAL" if source_type == "laptop_host" else "SYSLOG",
             },
             "class_uid": ocsf_class_uid,
             "category_name": category_name,
             "activity_name": activity_name,
             "severity_id": severity_id,
             "severity": severity_name,
-            "src_endpoint": {"ip": src_ip},
-            "dst_endpoint": {"ip": dst_ip},
+            "src_endpoint": {
+                "ip": src_ip,
+                "geo": f"Laptop: {LOCAL_HOSTNAME}" if source_type == "laptop_host" else "Edge Gateway",
+            },
+            "dst_endpoint": {
+                "ip": dst_ip,
+                "geo": "Local Machine" if source_type == "laptop_host" else "SOC Target",
+            },
             "enrichment": {
                 "is_malicious": is_malicious,
                 "threat_actor": threat_actor,
@@ -344,9 +389,53 @@ async def process_and_broadcast(raw_msg: str):
             pass
 
 
+async def host_log_tailer():
+    """Continuously tails live journalctl logs from the user's laptop."""
+    print(f"[ULPF HOST AGENT] Initiating live laptop journal log stream for {LOCAL_HOSTNAME} ({LOCAL_OS})...")
+    # First grab last 5 lines for immediate context
+    try:
+        proc_init = await asyncio.create_subprocess_exec(
+            "journalctl", "--no-pager", "-n", "6",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        out, _ = await proc_init.communicate()
+        if out:
+            for line in out.decode("utf-8", errors="ignore").splitlines():
+                line = line.strip()
+                if line:
+                    await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+    except Exception as e:
+        print(f"[ULPF HOST AGENT] Initial journal read note: {e}")
+
+    # Now continuously follow real-time system logs
+    while True:
+        if not HOST_LOGS_ACTIVE:
+            await asyncio.sleep(1)
+            continue
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "journalctl", "--no-pager", "-f", "-n", "0",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+            while HOST_LOGS_ACTIVE and proc.returncode is None:
+                line_bytes = await proc.stdout.readline()
+                if not line_bytes:
+                    break
+                line = line_bytes.decode("utf-8", errors="ignore").strip()
+                if line:
+                    await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[ULPF HOST AGENT ERROR] {e}")
+            await asyncio.sleep(3)
+
+
 @app.on_event("startup")
-async def start_udp_listener():
-    """Start UDP ingestion listener for the live firehose (514, 5140, 5514)."""
+async def startup_event_handler():
+    """Start UDP ingestion listener and laptop host log tailer."""
     loop = asyncio.get_running_loop()
     bound_any = False
     for port in [514, 5140, 5514]:
@@ -361,3 +450,33 @@ async def start_udp_listener():
             print(f"[UDP LISTENER NOTICE] Port {port} binding status (e.g. if Vector is bound): {e}")
     if not bound_any:
         print("[ULPF INGESTION WARNING] Could not bind UDP fallback ports (possibly already bound by Vector or other services).")
+
+    # Start live laptop host log tailing background task
+    global host_stream_task
+    host_stream_task = asyncio.create_task(host_log_tailer())
+    print(f"[ULPF HOST AGENT] Background task spawned for host: {LOCAL_HOSTNAME}")
+
+
+@app.get("/api/host-stream/status")
+def get_host_stream_status():
+    """Returns status and machine metadata of the user's laptop."""
+    return {
+        "hostname": LOCAL_HOSTNAME,
+        "os": LOCAL_OS,
+        "ip": LOCAL_IP,
+        "active": HOST_LOGS_ACTIVE,
+        "source_type": "laptop_host",
+    }
+
+
+@app.post("/api/host-stream/toggle")
+def toggle_host_stream(request: Request):
+    """Enable or disable streaming laptop logs to dashboard."""
+    global HOST_LOGS_ACTIVE
+    HOST_LOGS_ACTIVE = not HOST_LOGS_ACTIVE
+    return {
+        "hostname": LOCAL_HOSTNAME,
+        "active": HOST_LOGS_ACTIVE,
+        "message": f"Laptop log streaming {'resumed' if HOST_LOGS_ACTIVE else 'paused'}",
+    }
+

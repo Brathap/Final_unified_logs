@@ -7,7 +7,8 @@ import {
   Lock, 
   Filter, 
   ChevronRight, 
-  Info 
+  Info,
+  Laptop
 } from 'lucide-react';
 import type { ULPFLogRecord } from '../types';
 
@@ -18,7 +19,7 @@ interface LiveStreamProps {
   selectedLogId?: string;
 }
 
-type FilterMode = 'all' | 'threats' | 'pii' | 'blocks';
+type FilterMode = 'all' | 'laptop' | 'threats' | 'pii' | 'blocks';
 
 export const LiveStream: React.FC<LiveStreamProps> = ({ 
   logs, 
@@ -33,7 +34,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
     const trace = log?.traceability as any;
     const isMalicious = norm?.enrichment?.is_malicious || norm?.threat?.is_malicious;
     const piiRedacted = norm?.compliance?.pii_redacted || trace?.redacted_payload;
+    const isLaptop = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
 
+    if (filterMode === 'laptop' && !isLaptop) {
+      return false;
+    }
     if (filterMode === 'threats' && !isMalicious) {
       return false;
     }
@@ -109,6 +114,17 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             }`}
           >
             All Events ({logs.length})
+          </button>
+          <button
+            onClick={() => setFilterMode('laptop')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
+              filterMode === 'laptop'
+                ? 'bg-indigo-600 text-white shadow-sm font-bold'
+                : 'bg-white text-indigo-700 hover:text-indigo-900 border border-indigo-200 hover:bg-indigo-50'
+            }`}
+          >
+            <Laptop className="w-3.5 h-3.5" />
+            <span>My Laptop Logs</span>
           </button>
           <button
             onClick={() => setFilterMode('threats')}
@@ -231,11 +247,18 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   {/* Source Endpoint */}
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <div className="flex items-center space-x-1.5">
-                      <span className={`font-semibold text-xs ${isMalicious ? 'text-rose-700 font-bold' : 'text-slate-900'}`}>
+                      <span className={`font-semibold text-xs ${
+                        isMalicious ? 'text-rose-700 font-bold' : norm?.metadata?.source_type === 'laptop_host' ? 'text-indigo-700 font-bold' : 'text-slate-900'
+                      }`}>
                         {norm?.src_endpoint?.ip || '0.0.0.0'}
                       </span>
                       {norm?.src_endpoint?.geo && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 font-sans font-medium">
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded border font-sans font-medium flex items-center gap-1 ${
+                          norm?.metadata?.source_type === 'laptop_host'
+                            ? 'bg-indigo-50 text-indigo-750 border-indigo-200 font-bold'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {norm?.metadata?.source_type === 'laptop_host' && <Laptop className="w-2.5 h-2.5 text-indigo-600" />}
                           {norm.src_endpoint.geo}
                         </span>
                       )}
