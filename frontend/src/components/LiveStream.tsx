@@ -29,6 +29,31 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const counts = React.useMemo(() => {
+    let laptopCount = 0;
+    let threatCount = 0;
+    let piiCount = 0;
+    let blockCount = 0;
+
+    logs.forEach(log => {
+      const norm = log?.normalized_data as any;
+      const trace = log?.traceability as any;
+      const isLaptop = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
+      const isMalicious = norm?.enrichment?.is_malicious || norm?.threat?.is_malicious;
+      const piiRedacted = norm?.compliance?.pii_redacted || trace?.redacted_payload;
+      const act = (norm?.activity_name || '').toLowerCase();
+      const raw = (trace?.sanitized_raw || '').toLowerCase();
+      const isBlock = act.includes('block') || act.includes('denied') || raw.includes('denied') || raw.includes('block');
+
+      if (isLaptop) laptopCount++;
+      if (isMalicious) threatCount++;
+      if (piiRedacted) piiCount++;
+      if (isBlock) blockCount++;
+    });
+
+    return { laptopCount, threatCount, piiCount, blockCount };
+  }, [logs]);
+
   const filteredLogs = React.useMemo(() => {
     return logs.filter(log => {
       const norm = log?.normalized_data as any;
@@ -138,6 +163,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <span className="w-2 h-2 rounded-full bg-indigo-500" />
               <Laptop className="w-3.5 h-3.5 text-slate-600" />
               <span>Laptop Logs</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                filterMode === 'laptop' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+              }`}>
+                {counts.laptopCount}
+              </span>
             </button>
 
             <button
@@ -152,6 +182,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <span className="w-2 h-2 rounded-full bg-rose-500" />
               <ShieldAlert className="w-3.5 h-3.5 text-slate-600" />
               <span>Threat Alerts</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                filterMode === 'threats' ? 'bg-rose-50 text-rose-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+              }`}>
+                {counts.threatCount}
+              </span>
             </button>
 
             <button
@@ -166,6 +201,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               <Lock className="w-3.5 h-3.5 text-slate-600" />
               <span>Aadhaar Scrubbed</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                filterMode === 'pii' ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-slate-300/50 text-slate-600'
+              }`}>
+                {counts.piiCount}
+              </span>
             </button>
 
             <button
@@ -179,6 +219,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             >
               <span className="w-2 h-2 rounded-full bg-slate-500" />
               <span>Firewall Blocks</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                filterMode === 'blocks' ? 'bg-slate-100 text-slate-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+              }`}>
+                {counts.blockCount}
+              </span>
             </button>
           </div>
         </div>
