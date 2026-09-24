@@ -2,11 +2,12 @@ data_dir: "/tmp/vector"
 
 sources:
   syslog_ingest:
-    type: socket
-    address: 0.0.0.0:5140
+    type: syslog
     mode: udp
-    decoding:
-      codec: bytes
+    address: "0.0.0.0:5140"
+    buffer:
+      type: disk
+      max_size: 2147483648  # 2,048 MB Ring Buffer for Zero Drop
 
 enrichment_tables:
   threat_intel:
@@ -135,6 +136,14 @@ transforms:
       .normalized_data = normalized
 
 sinks:
+  local_archive:
+    type: file
+    inputs: 
+      - process_and_normalize
+    path: "/tmp/sih_lossless_archive.json"
+    encoding:
+      codec: json
+
   fastapi_backend:
     type: http
     inputs:

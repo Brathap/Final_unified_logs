@@ -128,14 +128,18 @@ export const App: React.FC = () => {
       {/* Top Professional Header (Clean Solid White Enterprise Bar) */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-40 px-4 sm:px-6 py-3 shadow-xs">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          {/* Left Branding */}
+          {/* Left Branding with Minimal PS Logo */}
           <div className="flex items-center space-x-3.5">
-            <div className="relative">
-              <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-sm">
-                <Shield className="w-5 h-5" />
+            <div className="relative group cursor-pointer">
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-xs border border-blue-200/80 bg-slate-900 flex items-center justify-center">
+                <img 
+                  src="/logo.jpg" 
+                  alt="ULPF Minimal Logo" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
               </div>
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600" />
               </span>
             </div>
@@ -252,7 +256,7 @@ export const App: React.FC = () => {
                 }`}
               >
                 <Fingerprint className="w-3.5 h-3.5 text-blue-600" />
-                <span>Air-Gap Provenance</span>
+                <span>Lossless & Provenance</span>
               </button>
             </nav>
 
