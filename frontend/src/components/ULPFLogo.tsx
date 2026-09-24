@@ -5,77 +5,108 @@ interface LogoProps {
   size?: number;
 }
 
-export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 36 }) => {
+export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 46 }) => {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
       <defs>
-        {/* Shield Gradient */}
-        <linearGradient id="shieldFillGrad" x1="24" y1="4" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+        {/* Neon Prismatic Cyber Gradient for Main Armor */}
+        <linearGradient id="cyberArmor" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#1e40af" />
+          <stop offset="50%" stopColor="#1d4ed8" />
+          <stop offset="100%" stopColor="#0f172a" />
         </linearGradient>
 
-        <linearGradient id="shieldBorderGrad" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#1d4ed8" />
+        {/* Hyper-Glow Cyan for Live Log Beams */}
+        <linearGradient id="laserBeam" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
 
-        {/* Glow */}
-        <filter id="laserGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#38bdf8" floodOpacity="0.8" />
+        {/* Intense Neon Drop-Shadow Filter */}
+        <filter id="neonBlast" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#38bdf8" floodOpacity="0.9" />
+        </filter>
+
+        <filter id="coreFlare" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#a855f7" floodOpacity="0.8" />
         </filter>
       </defs>
 
-      {/* 1. Clear Cybersecurity Defense Shield */}
+      {/* 1. Outer Hexagonal Cyber-Shield Perimeter (Defense & Air-Gap Non-Repudiation) */}
       <path
-        d="M24 4L42 11V23C42 34 34.5 41.5 24 44C13.5 41.5 6 34 6 23V11L24 4Z"
-        fill="url(#shieldFillGrad)"
-        stroke="url(#shieldBorderGrad)"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-
-      {/* 2. Three Incoming Raw Log Streams on the Left */}
-      {/* Top Stream */}
-      <path
-        d="M12 17H19L24 22H32"
-        stroke="#7dd3fc"
+        d="M32 4L56 16V40L32 60L8 40V16L32 4Z"
+        fill="url(#cyberArmor)"
+        stroke="#38bdf8"
         strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Middle Stream */}
-      <path
-        d="M10 24H33"
-        stroke="#ffffff"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-        filter="url(#laserGlow)"
-      />
-      {/* Bottom Stream */}
-      <path
-        d="M12 31H19L24 26H32"
-        stroke="#7dd3fc"
-        strokeWidth="2.5"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
 
-      {/* 3. Ingestion Dots on Left */}
-      <circle cx="12" cy="17" r="1.8" fill="#38bdf8" />
-      <circle cx="10" cy="24" r="2" fill="#ffffff" />
-      <circle cx="12" cy="31" r="1.8" fill="#38bdf8" />
+      {/* 2. Inner Shield Facet Accent */}
+      <path
+        d="M32 10L50 20V38L32 53L14 38V20L32 10Z"
+        fill="#0b1329"
+        stroke="#1e3a8a"
+        strokeWidth="1.5"
+      />
 
-      {/* 4. Single Unified Standardized Output Core (Right) */}
-      <circle cx="34" cy="24" r="3.2" fill="#38bdf8" filter="url(#laserGlow)" />
-      <circle cx="34" cy="24" r="1.5" fill="#ffffff" />
+      {/* 3. Three Multi-Source Log Beams Funneling into the Quantum Center */}
+      {/* Stream A: Top Beam (Firewall/Cisco) */}
+      <path
+        d="M12 22H24L32 30"
+        stroke="#38bdf8"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#neonBlast)"
+      />
+
+      {/* Stream B: Center Direct High-Speed Beam (Linux/Syslog) */}
+      <path
+        d="M8 32H30"
+        stroke="#67e8f9"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#neonBlast)"
+      />
+
+      {/* Stream C: Bottom Beam (WAF/CEF) */}
+      <path
+        d="M12 42H24L32 34"
+        stroke="#38bdf8"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#neonBlast)"
+      />
+
+      {/* 4. Converged Unified Standardized OCSF Output Ray (Blasting out to the right) */}
+      <path
+        d="M36 32H54"
+        stroke="url(#laserBeam)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        filter="url(#coreFlare)"
+      />
+
+      {/* 5. Central Quantum Normalization Core (The Lossless Uncorrupted Heart) */}
+      <circle cx="32" cy="32" r="6" fill="#0284c7" />
+      <polygon points="32,27 36,32 32,37 28,32" fill="#ffffff" filter="url(#neonBlast)" />
+
+      {/* 6. Ingestion Data Packet Pulses on Left Entrance */}
+      <circle cx="12" cy="22" r="2.2" fill="#ffffff" filter="url(#neonBlast)" />
+      <circle cx="8" cy="32" r="2.5" fill="#ffffff" filter="url(#neonBlast)" />
+      <circle cx="12" cy="42" r="2.2" fill="#ffffff" filter="url(#neonBlast)" />
+
+      {/* 7. Output Standard Node on Right Exit */}
+      <circle cx="54" cy="32" r="3" fill="#c084fc" filter="url(#coreFlare)" />
     </svg>
   );
 };

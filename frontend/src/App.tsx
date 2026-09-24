@@ -129,11 +129,11 @@ export const App: React.FC = () => {
       {/* Top Professional Header (Clean Solid White Enterprise Bar) */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-40 px-4 sm:px-6 py-3 shadow-xs">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          {/* Left Branding with Native Scalable ULPF Logo */}
+          {/* Left Branding with High-Impact Cyber Shield Logo */}
           <div className="flex items-center space-x-3.5">
-            <div className="relative group cursor-pointer">
-              <ULPFLogo size={42} className="shadow-xs transition-transform duration-300 group-hover:scale-105" />
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <div className="relative group cursor-pointer flex items-center">
+              <ULPFLogo size={44} className="drop-shadow-sm transition-transform duration-300 group-hover:scale-110" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600" />
               </span>
