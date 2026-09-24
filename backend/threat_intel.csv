@@ -1,0 +1,7 @@
+src_ip,threat_group,severity
+198.51.100.23,APT29,High
+203.0.113.84,LazarusGroup,Critical
+192.0.2.145,Sandworm,High
+103.21.244.12,VoltTyphoon,Medium
+198.51.100.99,LockBit,High
+203.0.113.111,CobaltStrike_C2,Critical
