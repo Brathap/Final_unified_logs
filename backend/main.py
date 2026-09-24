@@ -304,16 +304,32 @@ async def process_and_broadcast(raw_msg: str, source_type: str = "syslog_network
     lower = sanitized_msg.lower()
     if source_type == "laptop_host":
         ocsf_class_uid = 1001  # Operating System / Host System Activity
-        category_name = "System Activity"
-        activity_name = f"Host Event ({LOCAL_HOSTNAME})"
-        if any(k in lower for k in ["fail", "error", "fault", "warn", "critical"]):
+        category_name = "Host System"
+        
+        # Extract process or systemd unit from line (e.g. systemd[1945], buzzard-daemon.service, kernel)
+        unit_match = re.search(r"archlinux\s+([^:\[]+)(?:\[\d+\])?:", sanitized_msg)
+        proc_name = unit_match.group(1).strip() if unit_match else "OS Daemon"
+        
+        if any(k in lower for k in ["failed with result", "critical", "panic", "emergency"]):
+            severity_id = 5
+            severity_name = "Critical"
+            activity_name = f"{proc_name}: Service Failure"
+        elif any(k in lower for k in ["fail", "error", "fault", "exit-code", "modulenotfounderror"]):
             severity_id = 4
             severity_name = "High"
-            activity_name = "System Service Warning / Failure"
-        elif any(k in lower for k in ["restart", "started", "active"]):
+            activity_name = f"{proc_name}: Process Error"
+        elif any(k in lower for k in ["warn", "warning"]):
+            severity_id = 3
+            severity_name = "Medium"
+            activity_name = f"{proc_name}: System Warning"
+        elif any(k in lower for k in ["started", "scheduled", "success", "restart"]):
             severity_id = 1
             severity_name = "Informational"
-            activity_name = "Service State Transition"
+            activity_name = f"{proc_name}: Service Event"
+        else:
+            severity_id = 1
+            severity_name = "Informational"
+            activity_name = f"{proc_name}: System Routine"
     else:
         if any(k in lower for k in ["denied", "blocked", "failed"]):
             severity_id = 4

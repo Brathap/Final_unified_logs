@@ -165,19 +165,27 @@ export const App: React.FC = () => {
 
           {/* Desktop Right Controls */}
           <div className="hidden md:flex items-center space-x-3">
-            {/* LAPTOP HOST STREAM TOGGLE */}
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-indigo-50/70 border border-indigo-200 text-xs">
-              <button 
+            {/* LAPTOP HOST STREAM TOGGLE SWITCH */}
+            <div className="flex items-center space-x-2.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 border border-indigo-200 text-xs shadow-2xs">
+              <div className="flex items-center space-x-1.5 text-indigo-950 font-bold font-mono">
+                <Laptop className="w-4 h-4 text-indigo-600" />
+                <span className="hidden xl:inline">Host:</span>
+                <span>{hostInfo?.hostname || 'Laptop'}</span>
+              </div>
+              <button
                 onClick={toggleHostLogs}
-                className="flex items-center space-x-1.5 cursor-pointer font-bold text-indigo-900 hover:text-indigo-700 transition"
-                title="Live stream journal logs from this computer"
+                role="switch"
+                aria-checked={hostStreaming}
+                className={hostStreaming ? "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600 shadow-xs" : "relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-slate-300"}
+                title="Toggle real-time laptop system log streaming"
               >
-                <Laptop className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Laptop ({hostInfo?.hostname || 'Local'}):</span>
-                <span className={hostStreaming ? "px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-600 text-white" : "px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 text-slate-600"}>
-                  {hostStreaming ? 'LIVE' : 'OFF'}
-                </span>
+                <span
+                  className={hostStreaming ? "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out translate-x-5" : "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out translate-x-0"}
+                />
               </button>
+              <span className={hostStreaming ? "text-[11px] font-mono font-bold text-indigo-700" : "text-[11px] font-mono font-bold text-slate-500"}>
+                {hostStreaming ? 'ON' : 'OFF'}
+              </span>
             </div>
 
             {/* INSTANT DEMO MODE TOGGLE SWITCH */}

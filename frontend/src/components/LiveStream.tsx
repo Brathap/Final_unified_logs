@@ -235,11 +235,17 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
                   {/* OCSF Category & Action */}
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
-                    <div className="text-blue-700 font-bold text-xs flex items-center space-x-1">
-                      <span>{category}</span>
-                      {norm?.class_uid && <span className="text-[10px] text-slate-500 font-mono font-normal">({norm.class_uid})</span>}
+                    <div className="flex items-center space-x-1.5">
+                      <span className={norm?.metadata?.source_type === 'laptop_host' ? "text-indigo-700 font-bold text-xs" : "text-blue-700 font-bold text-xs"}>
+                        {category}
+                      </span>
+                      {norm?.class_uid && (
+                        <span className="text-[10px] text-slate-500 font-mono font-medium px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200">
+                          {norm.class_uid}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xs text-slate-600 truncate max-w-[170px] font-sans font-medium" title={norm?.activity_name}>
+                    <div className="text-xs text-slate-700 truncate max-w-[260px] font-sans font-medium mt-0.5" title={norm?.activity_name}>
                       {norm?.activity_name || 'Activity'}
                     </div>
                   </td>
