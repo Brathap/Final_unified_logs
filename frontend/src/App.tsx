@@ -56,12 +56,16 @@ export const App: React.FC = () => {
   }, []);
 
   const toggleHostLogs = async () => {
+    const nextState = !hostStreaming;
+    setHostStreaming(nextState); // Immediate optimistic switch
     try {
       const res = await fetch('http://localhost:8000/api/host-stream/toggle', { method: 'POST' });
       const data = await res.json();
-      setHostStreaming(Boolean(data.active));
+      if (typeof data.active === 'boolean') {
+        setHostStreaming(data.active);
+      }
     } catch (e) {
-      setHostStreaming(!hostStreaming);
+      console.warn("Toggle sync fallback", e);
     }
   };
 
@@ -164,50 +168,54 @@ export const App: React.FC = () => {
             {/* Unified System Controls Segment */}
             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 space-x-1 shadow-2xs">
               {/* Laptop Stream Switch */}
-              <div className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs">
-                <Laptop className="w-3.5 h-3.5 text-slate-600" />
-                <span className="font-semibold text-slate-700">Laptop Logs</span>
-                <button
-                  type="button"
-                  onClick={toggleHostLogs}
+              <button
+                type="button"
+                onClick={toggleHostLogs}
+                className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs cursor-pointer hover:bg-white transition-colors"
+                title="Toggle real-time laptop system log streaming"
+              >
+                <Laptop className={`w-3.5 h-3.5 ${hostStreaming ? 'text-blue-600' : 'text-slate-600'}`} />
+                <span className={`font-semibold ${hostStreaming ? 'text-blue-900 font-bold' : 'text-slate-700'}`}>Laptop Logs</span>
+                <span
                   role="switch"
                   aria-checked={hostStreaming}
                   className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                     hostStreaming ? 'bg-blue-600' : 'bg-slate-300'
                   }`}
-                  title="Toggle real-time laptop system log streaming"
                 >
                   <span
                     className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
                       hostStreaming ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
-                </button>
-              </div>
+                </span>
+              </button>
 
               <div className="h-4 w-px bg-slate-200" />
 
               {/* Demo Mode Switch */}
-              <div className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs">
-                <Sparkles className="w-3.5 h-3.5 text-slate-600" />
-                <span className="font-semibold text-slate-700">Demo Stream</span>
-                <button
-                  type="button"
-                  onClick={() => setInstantDemoMode(!instantDemoMode)}
+              <button
+                type="button"
+                onClick={() => setInstantDemoMode(!instantDemoMode)}
+                className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs cursor-pointer hover:bg-white transition-colors"
+                title="Toggle synthetic log generator"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${instantDemoMode ? 'text-amber-500' : 'text-slate-600'}`} />
+                <span className={`font-semibold ${instantDemoMode ? 'text-blue-900 font-bold' : 'text-slate-700'}`}>Demo Stream</span>
+                <span
                   role="switch"
                   aria-checked={instantDemoMode}
                   className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                     instantDemoMode ? 'bg-blue-600' : 'bg-slate-300'
                   }`}
-                  title="Toggle synthetic log generator"
                 >
                   <span
                     className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
                       instantDemoMode ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
-                </button>
-              </div>
+                </span>
+              </button>
             </div>
 
             {/* Standardized Tab Navigation Controls */}
