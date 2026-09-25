@@ -89,16 +89,18 @@ export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({
     return data;
   }, [throughput]);
 
-  const maliciousCount = logs.filter(l => {
-    const d = l.normalized_data as any;
-    return d?.threat?.is_malicious || d?.enrichment?.is_malicious;
-  }).length;
-  
-  const piiRedactedCount = logs.filter(l => {
-    const d = l.normalized_data as any;
-    const t = l.traceability as any;
-    return d?.compliance?.pii_redacted || t?.redacted_payload;
-  }).length;
+  const { maliciousCount, piiRedactedCount } = useMemo(() => {
+    let mal = 0;
+    let pii = 0;
+    for (let i = 0; i < logs.length; i++) {
+      const l = logs[i];
+      const d = l.normalized_data as any;
+      const t = l.traceability as any;
+      if (d?.threat?.is_malicious || d?.enrichment?.is_malicious) mal++;
+      if (d?.compliance?.pii_redacted || t?.redacted_payload) pii++;
+    }
+    return { maliciousCount: mal, piiRedactedCount: pii };
+  }, [logs]);
   
   const totalLogs = logs.length;
 

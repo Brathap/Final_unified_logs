@@ -135,11 +135,13 @@ class TestULPFFramework(unittest.TestCase):
         self.assertEqual(THREAT_INTEL["198.51.100.23"]["threat_group"], "APT29")
 
     def test_pii_aadhaar_redaction(self):
-        """Mandatory Privacy: Indian Aadhaar 12-digit in-memory scrubbing."""
-        text_with_aadhaar = "Customer KYC session_id=99281 aadhaar=982345129081 approved"
-        sanitized = re.sub(r"\b\d{12}\b", "[REDACTED_AADHAAR]", text_with_aadhaar)
+        """Mandatory Privacy: Indian Aadhaar 12-digit and 4-4-4 formatted in-memory scrubbing."""
+        text_with_aadhaar = "Customer KYC session_id=99281 aadhaar=982345129081 approved ref=4521 7890 2341 dash=9823-4512-9081"
+        sanitized = re.sub(r"\b\d{4}[ -]?\d{4}[ -]?\d{4}\b", "[REDACTED_AADHAAR]", text_with_aadhaar)
         self.assertNotIn("982345129081", sanitized)
-        self.assertIn("[REDACTED_AADHAAR]", sanitized)
+        self.assertNotIn("4521 7890 2341", sanitized)
+        self.assertNotIn("9823-4512-9081", sanitized)
+        self.assertEqual(sanitized.count("[REDACTED_AADHAAR]"), 3)
 
 
 if __name__ == "__main__":

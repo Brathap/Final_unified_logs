@@ -140,7 +140,7 @@ sinks:
     type: file
     inputs: 
       - process_and_normalize
-    path: "/tmp/sih_lossless_archive.json"
+    path: "storage/sih_lossless_archive.json"
     encoding:
       codec: json
 

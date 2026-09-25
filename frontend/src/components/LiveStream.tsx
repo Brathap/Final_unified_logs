@@ -8,35 +8,59 @@ import {
   Filter, 
   ChevronRight, 
   Info,
-  Laptop
+  Laptop,
+  Layers,
+  Copy,
+  Download,
+  Check
 } from 'lucide-react';
+import { exportLogs } from '../utils/exportFormats';
 import type { ULPFLogRecord } from '../types';
 
 interface LiveStreamProps {
   logs: ULPFLogRecord[];
   isStreaming: boolean;
-  onSelectLog: (log: ULPFLogRecord) => void;
+  onSelectLog: (log: ULPFLogRecord, occurrences?: ULPFLogRecord[]) => void;
   selectedLogId?: string;
   hostStreaming?: boolean;
+  onToggleHostLogs?: () => void;
+  filterMode?: 'all' | 'laptop' | 'threats' | 'pii' | 'blocks';
+  onFilterModeChange?: (mode: 'all' | 'laptop' | 'threats' | 'pii' | 'blocks') => void;
 }
 
 type FilterMode = 'all' | 'laptop' | 'threats' | 'pii' | 'blocks';
+
+interface DisplayLogEntry {
+  log: ULPFLogRecord;
+  repeatCount: number;
+  occurrences: ULPFLogRecord[];
+}
 
 export const LiveStream: React.FC<LiveStreamProps> = ({ 
   logs, 
   onSelectLog,
   selectedLogId,
-  hostStreaming = false
+  hostStreaming = false,
+  onToggleHostLogs,
+  filterMode: controlledFilterMode,
+  onFilterModeChange
 }) => {
-  const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  // If controlledFilterMode is provided, use it; otherwise use local state
+  const [internalFilterMode, setInternalFilterMode] = useState<FilterMode>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [collapseDuplicates, setCollapseDuplicates] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
-  // Auto-focus on laptop logs when user enables laptop streaming
-  React.useEffect(() => {
-    if (hostStreaming) {
-      setFilterMode('laptop');
+  const activeFilter = controlledFilterMode !== undefined ? controlledFilterMode : internalFilterMode;
+
+  const handleFilterChange = (mode: FilterMode) => {
+    if (onFilterModeChange) {
+      onFilterModeChange(mode);
+    } else {
+      setInternalFilterMode(mode);
     }
-  }, [hostStreaming]);
+  };
 
   const counts = React.useMemo(() => {
     let laptopCount = 0;
@@ -63,7 +87,8 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
     return { laptopCount, threatCount, piiCount, blockCount };
   }, [logs]);
 
-  const filteredLogs = React.useMemo(() => {
+  // Step 1: Filter raw logs based on active view and search term
+  const rawFilteredLogs = React.useMemo(() => {
     return logs.filter(log => {
       const norm = log?.normalized_data as any;
       const trace = log?.traceability as any;
@@ -71,16 +96,16 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
       const piiRedacted = norm?.compliance?.pii_redacted || trace?.redacted_payload;
       const isLaptop = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
 
-      if (filterMode === 'laptop' && !isLaptop) {
+      if (activeFilter === 'laptop' && !isLaptop) {
         return false;
       }
-      if (filterMode === 'threats' && !isMalicious) {
+      if (activeFilter === 'threats' && !isMalicious) {
         return false;
       }
-      if (filterMode === 'pii' && !piiRedacted) {
+      if (activeFilter === 'pii' && !piiRedacted) {
         return false;
       }
-      if (filterMode === 'blocks') {
+      if (activeFilter === 'blocks') {
         const act = (norm?.activity_name || '').toLowerCase();
         const raw = (trace?.sanitized_raw || '').toLowerCase();
         if (!act.includes('block') && !act.includes('denied') && !raw.includes('denied') && !raw.includes('block')) {
@@ -99,7 +124,39 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
       }
       return true;
     });
-  }, [logs, filterMode, searchTerm]);
+  }, [logs, activeFilter, searchTerm]);
+
+  // Step 2: Intelligent Deduplication / Grouping
+  const displayedEntries: DisplayLogEntry[] = React.useMemo(() => {
+    if (!collapseDuplicates) {
+      return rawFilteredLogs.map(log => ({ log, repeatCount: 1, occurrences: [log] }));
+    }
+
+    const grouped: DisplayLogEntry[] = [];
+    const seenMap = new Map<string, number>();
+
+    for (const log of rawFilteredLogs) {
+      const norm = log?.normalized_data as any;
+      let activity = norm?.activity_name || '';
+      // If it's host telemetry, group under common action 'Host Telemetry'
+      if (activity.toLowerCase().includes('host telemetry') || activity.toLowerCase().includes('systemd-hostmon')) {
+        activity = 'Host Telemetry Pulse';
+      }
+      
+      const key = `${norm?.class_uid || ''}_${norm?.category_name || ''}_${activity}_${norm?.src_endpoint?.ip || ''}_${norm?.dst_endpoint?.ip || ''}`;
+
+      if (seenMap.has(key)) {
+        const existingIndex = seenMap.get(key)!;
+        grouped[existingIndex].repeatCount += 1;
+        grouped[existingIndex].occurrences.push(log);
+      } else {
+        seenMap.set(key, grouped.length);
+        grouped.push({ log, repeatCount: 1, occurrences: [log] });
+      }
+    }
+
+    return grouped;
+  }, [rawFilteredLogs, collapseDuplicates]);
 
   const getSeverityBadge = (severity: string) => {
     switch (severity.toLowerCase()) {
@@ -145,16 +202,16 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
           <div className="flex bg-slate-200/70 p-1 rounded-lg border border-slate-200/80 space-x-1">
             <button
               type="button"
-              onClick={() => setFilterMode('all')}
+              onClick={() => handleFilterChange('all')}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                filterMode === 'all'
+                activeFilter === 'all'
                   ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>All Events</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                filterMode === 'all' ? 'bg-slate-100 text-slate-700' : 'bg-slate-300/50 text-slate-600'
+                activeFilter === 'all' ? 'bg-slate-100 text-slate-700' : 'bg-slate-300/50 text-slate-600'
               }`}>
                 {logs.length}
               </span>
@@ -162,18 +219,23 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
             <button
               type="button"
-              onClick={() => setFilterMode('laptop')}
+              onClick={() => {
+                handleFilterChange('laptop');
+                if (!hostStreaming && onToggleHostLogs) {
+                  onToggleHostLogs();
+                }
+              }}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                filterMode === 'laptop'
+                activeFilter === 'laptop'
                   ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-indigo-500" />
-              <Laptop className="w-3.5 h-3.5 text-slate-600" />
+              <span className={`w-2 h-2 rounded-full ${hostStreaming ? 'bg-indigo-500 animate-pulse' : 'bg-slate-400'}`} />
+              <Laptop className="w-3.5 h-3.5 text-indigo-600" />
               <span>Laptop Logs</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                filterMode === 'laptop' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+                activeFilter === 'laptop' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'bg-slate-300/50 text-slate-600'
               }`}>
                 {counts.laptopCount}
               </span>
@@ -181,9 +243,9 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
             <button
               type="button"
-              onClick={() => setFilterMode('threats')}
+              onClick={() => handleFilterChange('threats')}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                filterMode === 'threats'
+                activeFilter === 'threats'
                   ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -192,7 +254,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <ShieldAlert className="w-3.5 h-3.5 text-slate-600" />
               <span>Threat Alerts</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                filterMode === 'threats' ? 'bg-rose-50 text-rose-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+                activeFilter === 'threats' ? 'bg-rose-50 text-rose-700 font-bold' : 'bg-slate-300/50 text-slate-600'
               }`}>
                 {counts.threatCount}
               </span>
@@ -200,9 +262,9 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
             <button
               type="button"
-              onClick={() => setFilterMode('pii')}
+              onClick={() => handleFilterChange('pii')}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                filterMode === 'pii'
+                activeFilter === 'pii'
                   ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -211,7 +273,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <Lock className="w-3.5 h-3.5 text-slate-600" />
               <span>Aadhaar Scrubbed</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                filterMode === 'pii' ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-slate-300/50 text-slate-600'
+                activeFilter === 'pii' ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-slate-300/50 text-slate-600'
               }`}>
                 {counts.piiCount}
               </span>
@@ -219,9 +281,9 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
             <button
               type="button"
-              onClick={() => setFilterMode('blocks')}
+              onClick={() => handleFilterChange('blocks')}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                filterMode === 'blocks'
+                activeFilter === 'blocks'
                   ? 'bg-white text-slate-900 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -229,7 +291,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               <span className="w-2 h-2 rounded-full bg-slate-500" />
               <span>Firewall Blocks</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                filterMode === 'blocks' ? 'bg-slate-100 text-slate-700 font-bold' : 'bg-slate-300/50 text-slate-600'
+                activeFilter === 'blocks' ? 'bg-slate-100 text-slate-700 font-bold' : 'bg-slate-300/50 text-slate-600'
               }`}>
                 {counts.blockCount}
               </span>
@@ -237,14 +299,111 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
           </div>
         </div>
 
-        {/* Right Status & Search Bar */}
+        {/* Right Status & Controls */}
         <div className="flex items-center space-x-2">
+          {/* Deduplicate / Group Duplicates Toggle */}
+          <button
+            type="button"
+            onClick={() => setCollapseDuplicates(!collapseDuplicates)}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border transition cursor-pointer ${
+              collapseDuplicates 
+                ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' 
+                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+            }`}
+            title="Group repetitive log occurrences into a single item with count badge"
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">Group Duplicates</span>
+            <span className={`px-1 py-0.2 text-[10px] font-mono rounded ${collapseDuplicates ? 'bg-blue-200/60 text-blue-900' : 'bg-slate-100 text-slate-500'}`}>
+              {collapseDuplicates ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
           {hostStreaming && (
             <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-mono font-bold text-emerald-800 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <span>LIVE LAPTOP FEED ACTIVE</span>
             </div>
           )}
+
+          {/* Multi-Format Export Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              title="Download logs in any format (JSON, CSV, CEF, Syslog, JSONL)"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+
+            {showExportMenu && (
+              <div 
+                className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 z-50 text-xs font-sans"
+                onMouseLeave={() => setShowExportMenu(false)}
+              >
+                <div className="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 font-mono border-b border-slate-100 mb-1">
+                  Download {displayedEntries.length} Logs
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportLogs(displayedEntries.map(e => e.log), 'json', `ulpf_${activeFilter}_logs`);
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center justify-between cursor-pointer"
+                >
+                  <span>JSON (OCSF 1.1.0)</span>
+                  <span className="text-[10px] font-mono text-slate-400">.json</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportLogs(displayedEntries.map(e => e.log), 'csv', `ulpf_${activeFilter}_logs`);
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center justify-between cursor-pointer"
+                >
+                  <span>CSV Spreadsheet</span>
+                  <span className="text-[10px] font-mono text-slate-400">.csv</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportLogs(displayedEntries.map(e => e.log), 'cef', `ulpf_${activeFilter}_logs`);
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center justify-between cursor-pointer"
+                >
+                  <span>ArcSight CEF</span>
+                  <span className="text-[10px] font-mono text-slate-400">.cef</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportLogs(displayedEntries.map(e => e.log), 'syslog', `ulpf_${activeFilter}_logs`);
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center justify-between cursor-pointer"
+                >
+                  <span>RFC5424 Syslog</span>
+                  <span className="text-[10px] font-mono text-slate-400">.log</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportLogs(displayedEntries.map(e => e.log), 'jsonl', `ulpf_${activeFilter}_logs`);
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center justify-between cursor-pointer"
+                >
+                  <span>JSONL Lines</span>
+                  <span className="text-[10px] font-mono text-slate-400">.jsonl</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Search Bar matching exact height */}
           <div className="relative flex items-center">
@@ -254,7 +413,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               placeholder="Filter IP, actor, payload..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-8.5 pr-3 py-1.5 rounded-lg text-slate-900 placeholder-slate-400 w-56 md:w-64 transition-all outline-none"
+              className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-8.5 pr-3 py-1.5 rounded-lg text-slate-900 placeholder-slate-400 w-52 md:w-60 transition-all outline-none"
             />
           </div>
         </div>
@@ -276,7 +435,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-mono">
-            {filteredLogs.map((log, index) => {
+            {displayedEntries.map(({ log, repeatCount, occurrences }, index) => {
               const norm = (log?.normalized_data as any) || {};
               const trace = (log?.traceability as any) || {};
               const isMalicious = Boolean(norm?.enrichment?.is_malicious || norm?.threat?.is_malicious);
@@ -300,29 +459,62 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               const category = norm?.category_name || norm?.class_name || 'Network Activity';
               const severity = norm?.severity || norm?.threat?.severity_level || (isMalicious ? 'Critical' : 'Informational');
               const threatActor = norm?.enrichment?.threat_actor || norm?.threat?.actor || (isMalicious ? 'Threat Detected' : 'Benign');
+              const mitreId = norm?.enrichment?.mitre_id || norm?.threat?.mitre_id;
+              const isLaptopEvent = norm?.metadata?.source_type === 'laptop_host' || (trace?.sanitized_raw || '').startsWith('[HOST:');
               const isLatest = index === 0;
 
               return (
                 <tr
                   key={log?.id || rawHash || `${index}-${Date.now()}`}
-                  onClick={() => onSelectLog(log)}
+                  onClick={() => onSelectLog(log, occurrences)}
                   className={`transition-all duration-200 cursor-pointer ${
-                    isLatest ? (isMalicious ? 'animate-threat-entry' : 'animate-log-entry') : ''
+                    isLatest 
+                      ? (isMalicious ? 'animate-threat-entry' : isLaptopEvent ? 'animate-laptop-entry' : 'animate-log-entry') 
+                      : ''
                   } ${
                     isSelected
                       ? 'bg-blue-50 border-l-4 border-l-blue-600'
                       : isMalicious
                       ? 'bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-l-rose-500'
+                      : isLaptopEvent
+                      ? 'bg-indigo-50/30 hover:bg-indigo-50/60 border-l-4 border-l-indigo-400'
                       : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent'
                   }`}
                 >
                   {/* Timestamp & SHA */}
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
-                    <div className="text-slate-900 font-bold text-xs">
-                      {timeString}
+                    <div className="text-slate-900 font-bold text-xs flex items-center space-x-1.5">
+                      <span>{timeString}</span>
+                      {repeatCount > 1 && (
+                        <span 
+                          title={`${repeatCount} identical log entries collapsed`}
+                          className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200 animate-pulse"
+                        >
+                          ×{repeatCount}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-slate-500 font-mono truncate max-w-[90px]" title={rawHash}>
-                      {shaPrefix}...
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <span className="text-[11px] text-slate-500 font-mono truncate max-w-[85px]" title={rawHash}>
+                        {shaPrefix}...
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(rawHash);
+                          setCopiedHash(rawHash);
+                          setTimeout(() => setCopiedHash(null), 1500);
+                        }}
+                        className="text-slate-400 hover:text-blue-600 transition cursor-pointer p-0.5 rounded hover:bg-slate-200/50"
+                        title="Copy complete SHA-256 hash"
+                      >
+                        {copiedHash === rawHash ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
                     </div>
                   </td>
 
@@ -384,7 +576,15 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                     {isMalicious ? (
                       <div className="flex items-center space-x-1.5 text-rose-700 font-bold text-xs">
                         <ShieldAlert className="w-3.5 h-3.5 text-rose-600 animate-pulse shrink-0" />
-                        <span className="truncate max-w-[130px]">{threatActor}</span>
+                        <span className="truncate max-w-[120px]">{threatActor}</span>
+                        {mitreId && (
+                          <span 
+                            title={`MITRE ATT&CK Technique: ${mitreId}`}
+                            className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600 text-white shadow-xs tracking-wider"
+                          >
+                            [MITRE: {mitreId}]
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center space-x-1 text-slate-600 text-xs font-sans">
@@ -416,7 +616,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                 </tr>
               );
             })}
-            {filteredLogs.length === 0 && (
+            {displayedEntries.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-slate-500 bg-white">
                   <div className="flex flex-col items-center justify-center space-y-2">
@@ -435,7 +635,12 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
       <div className="p-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between text-xs text-slate-600 px-4 font-mono gap-2">
         <div className="flex items-center space-x-2">
           <Info className="w-3.5 h-3.5 text-blue-600" />
-          <span>Showing <strong className="text-slate-900 font-bold">{filteredLogs.length}</strong> enterprise events</span>
+          <span>
+            Showing <strong className="text-slate-900 font-bold">{displayedEntries.length}</strong> {collapseDuplicates ? 'distinct' : 'total'} enterprise events
+            {collapseDuplicates && rawFilteredLogs.length > displayedEntries.length && (
+              <span className="ml-1.5 text-blue-600 font-bold">({rawFilteredLogs.length - displayedEntries.length} duplicates collapsed)</span>
+            )}
+          </span>
         </div>
         <div className="flex items-center space-x-2 text-slate-500 font-sans">
           <span>Click any row for side-by-side forensic analysis</span>
