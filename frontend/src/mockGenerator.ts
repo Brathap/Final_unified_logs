@@ -44,11 +44,13 @@ function pseudoHash(str: string): string {
 }
 
 export function generateSyntheticLog(): ULPFLogRecord {
-  const isLaptopHost = Math.random() < 0.25;
-  const isMalicious = !isLaptopHost && Math.random() < 0.28;
-  const hasAadhaar = !isLaptopHost && Math.random() < 0.32;
-  const isCisco = !isLaptopHost && Math.random() < 0.45;
-  const isImperva = !isLaptopHost && !isCisco && Math.random() < 0.6;
+  // Demo Stream strictly produces enterprise network & security appliance logs (Cisco, Imperva, SSHD)
+  // Real laptop systemd host logs are streamed exclusively when Laptop Logs toggle is ON
+  const isLaptopHost = false;
+  const isMalicious = Math.random() < 0.28;
+  const hasAadhaar = Math.random() < 0.32;
+  const isCisco = Math.random() < 0.5;
+  const isImperva = !isCisco && Math.random() < 0.6;
 
   const now = new Date();
   const timestamp = now.toISOString();
