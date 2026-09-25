@@ -283,7 +283,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                 <tr
                   key={log?.id || rawHash || Math.random()}
                   onClick={() => onSelectLog(log)}
-                  className={`transition-colors duration-100 cursor-pointer ${
+                  className={`transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? 'bg-blue-50 border-l-4 border-l-blue-600'
                       : isMalicious

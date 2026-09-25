@@ -29,16 +29,16 @@ export const App: React.FC = () => {
   const [hostStreaming, setHostStreaming] = useState(true);
   const [hostInfo, setHostInfo] = useState<{ hostname: string; ip: string } | null>(null);
   
-  // Instant Demo Mode Toggle (enabled by default for immediate presentation)
+  // Instant Demo Mode Toggle (enabled by default for immediate, lively presentation)
   const [instantDemoMode, setInstantDemoMode] = useState(true);
-  const [eps, setEps] = useState(12);
+  const [eps, setEps] = useState(14);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logCountRef = useRef(0);
 
   // Initialize with initial batch of high-fidelity logs across all categories
   useEffect(() => {
     const seed: ULPFLogRecord[] = [];
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 40; i++) {
       seed.push(generateSyntheticLog());
     }
     setLogs(seed);
@@ -65,15 +65,15 @@ export const App: React.FC = () => {
     }
   };
 
-  // 1. Instant Demo Mode Generator (Smooth, non-blocking 1400ms cadence)
+  // 1. Instant Demo Mode Generator (Smooth, non-blocking 800ms cadence)
   useEffect(() => {
     if (!instantDemoMode) return;
 
     const demoInterval = setInterval(() => {
       const newLog = generateSyntheticLog();
-      setLogs(prev => [newLog, ...prev.slice(0, 49)]);
+      setLogs(prev => [newLog, ...prev.slice(0, 59)]);
       logCountRef.current += 1;
-    }, 1400);
+    }, 800);
 
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
