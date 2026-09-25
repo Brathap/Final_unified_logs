@@ -405,13 +405,18 @@ async def process_and_broadcast(raw_msg: str, source_type: str = "syslog_network
             pass
 
 
+current_journal_proc: Optional[asyncio.subprocess.Process] = None
+
+
 async def host_log_tailer():
-    """Continuously tails live journalctl logs from the user's laptop."""
+    """Continuously tails live journalctl logs from the user's laptop in real time."""
+    global current_journal_proc
     print(f"[ULPF HOST AGENT] Initiating live laptop journal log stream for {LOCAL_HOSTNAME} ({LOCAL_OS})...")
-    # First grab last 5 lines for immediate context
+
+    # Initial single context line for instant feedback
     try:
         proc_init = await asyncio.create_subprocess_exec(
-            "journalctl", "--no-pager", "-n", "6",
+            "journalctl", "--no-pager", "-n", "3",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL
         )
@@ -424,19 +429,19 @@ async def host_log_tailer():
     except Exception as e:
         print(f"[ULPF HOST AGENT] Initial journal read note: {e}")
 
-    # Now continuously follow real-time system logs
+    # Now continuously follow real-time system logs line-by-line instantly
     while True:
         if not HOST_LOGS_ACTIVE:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.3)
             continue
         try:
-            proc = await asyncio.create_subprocess_exec(
+            current_journal_proc = await asyncio.create_subprocess_exec(
                 "journalctl", "--no-pager", "-f", "-n", "0",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL
             )
-            while HOST_LOGS_ACTIVE and proc.returncode is None:
-                line_bytes = await proc.stdout.readline()
+            while HOST_LOGS_ACTIVE and current_journal_proc.returncode is None:
+                line_bytes = await current_journal_proc.stdout.readline()
                 if not line_bytes:
                     break
                 line = line_bytes.decode("utf-8", errors="ignore").strip()
@@ -446,7 +451,14 @@ async def host_log_tailer():
             break
         except Exception as e:
             print(f"[ULPF HOST AGENT ERROR] {e}")
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
+        finally:
+            if current_journal_proc and current_journal_proc.returncode is None:
+                try:
+                    current_journal_proc.kill()
+                except Exception:
+                    pass
+                current_journal_proc = None
 
 
 @app.on_event("startup")
@@ -486,10 +498,34 @@ def get_host_stream_status():
 
 
 @app.post("/api/host-stream/toggle")
-def toggle_host_stream(request: Request):
+async def toggle_host_stream(request: Request):
     """Enable or disable streaming laptop logs to dashboard."""
-    global HOST_LOGS_ACTIVE
+    global HOST_LOGS_ACTIVE, current_journal_proc
     HOST_LOGS_ACTIVE = not HOST_LOGS_ACTIVE
+    
+    if not HOST_LOGS_ACTIVE:
+        if current_journal_proc and current_journal_proc.returncode is None:
+            try:
+                current_journal_proc.kill()
+            except Exception:
+                pass
+            current_journal_proc = None
+    else:
+        # Instantly emit current system heartbeat line so user gets immediate visual feedback
+        try:
+            proc_quick = await asyncio.create_subprocess_exec(
+                "journalctl", "--no-pager", "-n", "1",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+            out, _ = await proc_quick.communicate()
+            if out:
+                line = out.decode("utf-8", errors="ignore").strip()
+                if line:
+                    asyncio.create_task(process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host"))
+        except Exception:
+            pass
+
     return {
         "hostname": LOCAL_HOSTNAME,
         "active": HOST_LOGS_ACTIVE,

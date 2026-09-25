@@ -17,6 +17,7 @@ interface LiveStreamProps {
   isStreaming: boolean;
   onSelectLog: (log: ULPFLogRecord) => void;
   selectedLogId?: string;
+  hostStreaming?: boolean;
 }
 
 type FilterMode = 'all' | 'laptop' | 'threats' | 'pii' | 'blocks';
@@ -24,10 +25,18 @@ type FilterMode = 'all' | 'laptop' | 'threats' | 'pii' | 'blocks';
 export const LiveStream: React.FC<LiveStreamProps> = ({ 
   logs, 
   onSelectLog,
-  selectedLogId 
+  selectedLogId,
+  hostStreaming = false
 }) => {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto-focus on laptop logs when user enables laptop streaming
+  React.useEffect(() => {
+    if (hostStreaming) {
+      setFilterMode('laptop');
+    }
+  }, [hostStreaming]);
 
   const counts = React.useMemo(() => {
     let laptopCount = 0;
@@ -257,7 +266,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-mono">
-            {filteredLogs.map((log) => {
+            {filteredLogs.map((log, index) => {
               const norm = (log?.normalized_data as any) || {};
               const trace = (log?.traceability as any) || {};
               const isMalicious = Boolean(norm?.enrichment?.is_malicious || norm?.threat?.is_malicious);
@@ -278,12 +287,15 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               const category = norm?.category_name || norm?.class_name || 'Network Activity';
               const severity = norm?.severity || norm?.threat?.severity_level || (isMalicious ? 'Critical' : 'Informational');
               const threatActor = norm?.enrichment?.threat_actor || norm?.threat?.actor || (isMalicious ? 'Threat Detected' : 'Benign');
+              const isLatest = index === 0;
 
               return (
                 <tr
-                  key={log?.id || rawHash || Math.random()}
+                  key={log?.id || rawHash || `${index}-${Date.now()}`}
                   onClick={() => onSelectLog(log)}
                   className={`transition-all duration-200 cursor-pointer ${
+                    isLatest ? (isMalicious ? 'animate-threat-entry' : 'animate-log-entry') : ''
+                  } ${
                     isSelected
                       ? 'bg-blue-50 border-l-4 border-l-blue-600'
                       : isMalicious

@@ -326,6 +326,7 @@ export const App: React.FC = () => {
               isStreaming={isStreaming || instantDemoMode} 
               onSelectLog={(log) => setSelectedLog(log)}
               selectedLogId={selectedLog?.id || selectedLog?.traceability.raw_sha256}
+              hostStreaming={hostStreaming}
             />
           </div>
         )}

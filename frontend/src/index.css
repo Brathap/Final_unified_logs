@@ -33,3 +33,35 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Real-Time Live Log Entry & Pulse Animations */
+@keyframes logFlash {
+  0% {
+    background-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-2px);
+  }
+  100% {
+    background-color: transparent;
+    transform: translateY(0);
+  }
+}
+
+.animate-log-entry {
+  animation: logFlash 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes threatFlash {
+  0% {
+    background-color: rgba(225, 29, 72, 0.25);
+    transform: translateY(-2px);
+  }
+  100% {
+    background-color: rgba(255, 241, 242, 0.7);
+    transform: translateY(0);
+  }
+}
+
+.animate-threat-entry {
+  animation: threatFlash 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
