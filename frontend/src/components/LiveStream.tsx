@@ -237,16 +237,26 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
           </div>
         </div>
 
-        {/* Search Bar matching exact height */}
-        <div className="relative flex items-center">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Filter IP, actor, payload..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-8.5 pr-3 py-1.5 rounded-lg text-slate-900 placeholder-slate-400 w-56 md:w-64 transition-all outline-none"
-          />
+        {/* Right Status & Search Bar */}
+        <div className="flex items-center space-x-2">
+          {hostStreaming && (
+            <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-mono font-bold text-emerald-800 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>LIVE LAPTOP FEED ACTIVE</span>
+            </div>
+          )}
+
+          {/* Search Bar matching exact height */}
+          <div className="relative flex items-center">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Filter IP, actor, payload..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-xs pl-8.5 pr-3 py-1.5 rounded-lg text-slate-900 placeholder-slate-400 w-56 md:w-64 transition-all outline-none"
+            />
+          </div>
         </div>
       </div>
 

@@ -144,9 +144,6 @@ export const App: React.FC = () => {
                 <h1 className="text-base sm:text-lg font-black tracking-wider text-slate-900 uppercase font-mono">
                   ULPF <span className="text-blue-600">//</span> NTRO AIR-GAPPED FABRIC
                 </h1>
-                <span className="hidden md:inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 font-mono">
-                  SIH 26156
-                </span>
                 <span className="hidden lg:inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
                   OCSF v1.1.0
                 </span>

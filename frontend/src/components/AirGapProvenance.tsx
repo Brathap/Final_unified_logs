@@ -86,7 +86,7 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
                   Lossless Event Verification & Forensic Provenance Fabric
                 </h2>
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
-                  SIH 26156 Core Criterion (a & d)
+                  Lossless Non-Repudiation Standard
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
