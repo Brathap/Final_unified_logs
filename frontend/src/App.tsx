@@ -313,7 +313,14 @@ export const App: React.FC = () => {
       <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto flex flex-col">
         {activeTab === 'soc' && (
           <div className="flex-1 flex flex-col">
-            <TelemetryMetrics logs={logs} throughput={eps} />
+            <TelemetryMetrics 
+              logs={logs} 
+              throughput={eps} 
+              hostStreaming={hostStreaming}
+              instantDemoMode={instantDemoMode}
+              isStreaming={isStreaming}
+              hostInfo={hostInfo}
+            />
             <LiveStream 
               logs={logs} 
               isStreaming={isStreaming || instantDemoMode} 

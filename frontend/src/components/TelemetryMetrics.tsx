@@ -17,18 +17,35 @@ import {
   Database, 
   Lock, 
   Globe2, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Server,
+  Terminal,
+  Radio,
+  Cpu,
+  ShieldCheck,
+  Flame
 } from 'lucide-react';
 import type { ULPFLogRecord } from '../types';
 
 interface TelemetryMetricsProps {
   logs: ULPFLogRecord[];
   throughput: number;
+  hostStreaming?: boolean;
+  instantDemoMode?: boolean;
+  isStreaming?: boolean;
+  hostInfo?: { hostname: string; ip: string } | null;
 }
 
 const COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed'];
 
-export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({ logs, throughput }) => {
+export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({ 
+  logs, 
+  throughput,
+  hostStreaming = false,
+  instantDemoMode = true,
+  isStreaming = false,
+  hostInfo = null
+}) => {
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     logs.forEach(log => {
@@ -232,6 +249,150 @@ export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({ logs, throug
 
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2.5 overflow-hidden">
             <div className="bg-emerald-600 h-full rounded-full" style={{ width: '100%' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Currently Running Services & Pipeline Runtime Monitor */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100">
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-100">
+              <Cpu className="w-3.5 h-3.5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-black text-slate-800 tracking-wider uppercase font-mono">
+                  Currently Running Services
+                </span>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  REAL-TIME PIPELINE ACTIVE
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+            <span>Kernel: <strong className="text-slate-800">Linux / Arch</strong></span>
+            <span>•</span>
+            <span>Gateway: <strong className="text-blue-600">FastAPI :8000</strong></span>
+            <span>•</span>
+            <span>Syslog UDP: <strong className="text-emerald-700">:5140</strong></span>
+          </div>
+        </div>
+
+        {/* Dynamic Running Services Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          {/* 1. Vector VRL Ingestion Engine */}
+          <div className="p-2.5 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-white transition-colors">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Server className="w-3 h-3 text-blue-600" />
+                Vector VRL
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono">UDP 5140 / 514</div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="text-emerald-700 font-bold font-mono">RUNNING</span>
+              <span className="text-slate-500 font-mono">Lossless Wire</span>
+            </div>
+          </div>
+
+          {/* 2. Laptop Journalctl Host Tailer */}
+          <div className={`p-2.5 rounded-lg border transition-colors ${
+            hostStreaming 
+              ? 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50' 
+              : 'border-slate-200/90 bg-slate-50/70 hover:bg-white'
+          }`}>
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Terminal className={`w-3 h-3 ${hostStreaming ? 'text-emerald-600' : 'text-slate-500'}`} />
+                Laptop Host
+              </span>
+              <span className={`w-2 h-2 rounded-full ${hostStreaming ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono truncate" title={hostInfo?.hostname || 'archlinux'}>
+              {hostInfo?.hostname || 'archlinux'}
+            </div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className={`font-bold font-mono ${hostStreaming ? 'text-emerald-700' : 'text-slate-500'}`}>
+                {hostStreaming ? 'STREAMING' : 'STANDBY'}
+              </span>
+              <span className="text-slate-500 font-mono">OCSF 1001</span>
+            </div>
+          </div>
+
+          {/* 3. Demo Stream Generator */}
+          <div className={`p-2.5 rounded-lg border transition-colors ${
+            instantDemoMode 
+              ? 'border-blue-200 bg-blue-50/40 hover:bg-blue-50/70' 
+              : 'border-slate-200/90 bg-slate-50/70 hover:bg-white'
+          }`}>
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Flame className={`w-3 h-3 ${instantDemoMode ? 'text-amber-500' : 'text-slate-500'}`} />
+                Demo Firehose
+              </span>
+              <span className={`w-2 h-2 rounded-full ${instantDemoMode ? 'bg-blue-600 animate-pulse' : 'bg-slate-300'}`} />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono">Cadence 800ms</div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className={`font-bold font-mono ${instantDemoMode ? 'text-blue-700' : 'text-slate-500'}`}>
+                {instantDemoMode ? 'ACTIVE' : 'IDLE'}
+              </span>
+              <span className="text-slate-500 font-mono">16 Threat Sigs</span>
+            </div>
+          </div>
+
+          {/* 4. Aadhaar PII Interceptor */}
+          <div className="p-2.5 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-white transition-colors">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Lock className="w-3 h-3 text-amber-500" />
+                PII Redactor
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono">Aadhaar Regex</div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="text-emerald-700 font-bold font-mono">ENFORCING</span>
+              <span className="text-slate-500 font-mono">Zero Leakage</span>
+            </div>
+          </div>
+
+          {/* 5. Threat Intelligence Engine */}
+          <div className="p-2.5 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-white transition-colors">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-rose-600" />
+                Threat Intel
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono">NTRO IOC DB</div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="text-emerald-700 font-bold font-mono">ARMED</span>
+              <span className="text-slate-500 font-mono">O(1) Memory</span>
+            </div>
+          </div>
+
+          {/* 6. SSE Stream Broadcast */}
+          <div className="p-2.5 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-white transition-colors">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Radio className="w-3 h-3 text-emerald-600" />
+                SSE Broadcast
+              </span>
+              <span className={`w-2 h-2 rounded-full ${isStreaming ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500'}`} />
+            </div>
+            <div className="text-xs font-black text-slate-900 font-mono">/api/stream</div>
+            <div className="flex items-center justify-between mt-1 text-[10px]">
+              <span className="text-emerald-700 font-bold font-mono">
+                {isStreaming ? 'CONNECTED' : 'DISPATCHING'}
+              </span>
+              <span className="text-slate-500 font-mono">60 FPS Sync</span>
+            </div>
           </div>
         </div>
       </div>
