@@ -284,10 +284,13 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
               const rawHash = trace?.raw_sha256 || trace?.raw_hash || '0000000000';
               const isSelected = selectedLogId === log?.id || selectedLogId === rawHash;
               
-              // Extract timestamp from ingest_timestamp or regex match from raw payload
+              // Extract timestamp with millisecond precision to show true real-time arrival
               let timeString = 'Just now';
               if (trace?.ingest_timestamp) {
-                timeString = new Date(trace.ingest_timestamp).toLocaleTimeString([], { hour12: false });
+                const d = new Date(trace.ingest_timestamp);
+                const base = d.toLocaleTimeString([], { hour12: false });
+                const ms = String(d.getMilliseconds()).padStart(3, '0');
+                timeString = `${base}.${ms}`;
               } else if (norm?.activity_name) {
                 const timeMatch = norm.activity_name.match(/(\d{2}:\d{2}:\d{2})/);
                 if (timeMatch) timeString = timeMatch[1];
