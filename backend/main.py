@@ -1494,7 +1494,11 @@ def verify_auth_token(user: AuthUser = Security(require_role(["admin", "operator
 
 
 # Static Frontend Asset Serving (Single Container & Air-Gapped Deployments)
-FRONTEND_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+
+# FIX: Point to the 'frontend/dist' folder at the root level, NOT inside backend
+FRONTEND_DIST = os.path.join(PROJECT_ROOT, "frontend", "dist")
 
 if os.path.exists(FRONTEND_DIST):
     assets_dir = os.path.join(FRONTEND_DIST, "assets")
@@ -1514,8 +1518,11 @@ if os.path.exists(FRONTEND_DIST):
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend assets not found.")
 else:
-    print(f"[WARNING] React build folder not found at {FRONTEND_DIST}")
-
-
-
-
+    # Adding a debug route so if it fails, you see exactly what folders exist
+    @app.get("/")
+    def debug_paths():
+        return {
+            "error": "React Build Folder Missing",
+            "looked_for_path": FRONTEND_DIST,
+            "root_contents": os.listdir(PROJECT_ROOT)
+        }
