@@ -1,6 +1,6 @@
 # Vector Remap Language (VRL) Parser: Juniper_SRX_Firewall
 # Generated autonomously by ULPF AI Mapper Studio for firewall (SYSLOG)
-# Timestamp: 2026-09-25T19:02:57.142427+00:00
+# Timestamp: 2026-09-29T07:56:01.066785+00:00
 
 raw_msg = string!(.message)
 sanitized_msg = replace(raw_msg, r'\b\d{4}[ -]?\d{4}[ -]?\d{4}\b', "[REDACTED_AADHAAR]")

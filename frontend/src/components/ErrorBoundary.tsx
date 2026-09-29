@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <RefreshCw className="w-4 h-4" />
                 <span>Reload Application</span>
               </button>
-              <span className="text-xs text-slate-400 font-mono">NTRO SIH26156 SOC UI</span>
+              <span className="text-xs text-slate-400 font-mono">ULPF Enterprise Core</span>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 44 }) => 
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`shrink-0 block ${className}`}
     >
       <defs>
         {/* Precision Beveled Cyber Gradient */}
@@ -47,6 +47,13 @@ export const ULPFLogo: React.FC<LogoProps> = ({ className = '', size = 44 }) => 
       </defs>
 
       {/* 1. Outer Angular Security Shield Silhouette */}
+      <path
+        d="M32 4L54 13V28C54 43 44 54 32 59C20 54 10 43 10 28V13L32 4Z"
+        fill="#1e40af"
+        stroke="#38bdf8"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
       <path
         d="M32 4L54 13V28C54 43 44 54 32 59C20 54 10 43 10 28V13L32 4Z"
         fill="url(#shieldMain)"

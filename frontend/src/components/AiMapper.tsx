@@ -12,6 +12,8 @@ import {
   Cpu, 
   Play 
 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { getAuthHeaders, API_BASE_URL } from '../utils/api';
 
 const OCSF_TARGET_FIELDS = [
   { value: 'src_endpoint.ip', label: 'Source IP Address (src_endpoint.ip)' },
@@ -82,6 +84,7 @@ const PRESETS = [
 ];
 
 export const AiMapper: React.FC = () => {
+  const { showToast } = useToast();
   const [selectedPresetId, setSelectedPresetId] = useState('paloalto');
   const [parserName, setParserName] = useState('PaloAlto_GlobalProtect_VPN');
   const [sourceType, setSourceType] = useState('vpn_gateway');
@@ -129,10 +132,13 @@ export const AiMapper: React.FC = () => {
     if (!rawSample.trim()) return;
     setIsInferring(true);
     setDeployResult({ status: 'idle', message: '' });
+    showToast('AI Inference Started', 'Analyzing wire structure and token patterns...', 'info');
 
     try {
-      const res = await axios.post('http://localhost:8000/api/ai-infer-schema', {
+      const res = await axios.post(`${API_BASE_URL}/api/ai-infer-schema`, {
         raw_sample: rawSample
+      }, {
+        headers: getAuthHeaders()
       });
       const data = res.data;
       if (data && data.status === 'success') {
@@ -147,13 +153,15 @@ export const AiMapper: React.FC = () => {
           })));
         }
 
+        const successMsg = `AI Inference Complete (${data.confidence_score}% Confidence): Autonomously mapped ${data.inferred_mappings.length} schema fields for ${data.detected_source_type} (${data.detected_wire_format}).`;
         setDeployResult({
           status: 'success',
-          message: `AI Inference Complete (${data.confidence_score}% Confidence): Autonomously mapped ${data.inferred_mappings.length} schema fields for ${data.detected_source_type} (${data.detected_wire_format}).`
+          message: successMsg
         });
+        showToast('AI Mapping Succeeded', `${data.inferred_mappings.length} fields mapped at ${data.confidence_score}% confidence`, 'success');
       }
     } catch (err: any) {
-      console.warn("AI Inference error", err);
+      showToast('Inference Error', err.response?.data?.error || err.message || 'AI Schema inference failed', 'error');
     } finally {
       setIsInferring(false);
     }
@@ -162,6 +170,7 @@ export const AiMapper: React.FC = () => {
   const handleDeployParser = async () => {
     setIsDeploying(true);
     setDeployResult({ status: 'idle', message: '' });
+    showToast('Compiling Parser', `Validating syntax and building VRL script for ${parserName}...`, 'info');
 
     try {
       const mappingDict: Record<string, string> = {};
@@ -171,89 +180,99 @@ export const AiMapper: React.FC = () => {
         }
       });
 
-      const response = await axios.post('http://localhost:8000/api/generate-parser', {
+      const response = await axios.post(`${API_BASE_URL}/api/generate-parser`, {
         parser_name: parserName,
         source_type: sourceType,
         wire_format: wireFormat,
         mappings: mappingDict,
         raw_sample: rawSample,
+      }, {
+        headers: getAuthHeaders()
       });
 
+      const successMsg = response.data.message || 'Parser successfully deployed to Vector pipeline!';
       setDeployResult({
         status: 'success',
-        message: response.data.message || 'Parser successfully deployed to Vector pipeline!',
+        message: successMsg,
         vrlPreview: response.data.vrl_preview,
       });
+      showToast('Parser Deployed', `Vector remap ${parserName}.vrl active with zero downtime`, 'success');
     } catch (err: any) {
+      const errMsg = err.response?.data?.error || err.response?.data?.detail || err.message || 'Failed to deploy parser to Vector backend.';
       setDeployResult({
         status: 'error',
-        message: err.response?.data?.error || err.message || 'Failed to deploy parser to Vector backend.',
+        message: errMsg,
       });
+      showToast('Deployment Failed', errMsg, 'error');
     } finally {
       setIsDeploying(false);
     }
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <div className="bg-white/95 dark:bg-slate-900/90 border border-stone-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs transition-colors duration-200">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between pb-5 mb-5 border-b border-slate-200 gap-4">
+      <div className="flex flex-wrap items-center justify-between pb-5 mb-5 border-b border-stone-100 dark:border-slate-800 gap-4">
         <div className="flex items-center space-x-3.5">
-          <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+          <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <h2 className="text-base font-extrabold text-stone-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               Autonomous AI Schema Studio
-              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold">
                 Vector VRL Engine
               </span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
               Compile proprietary vendor device schemas into standard OCSF v1.1.0 with zero runtime downtime
             </p>
           </div>
         </div>
 
-        {/* Deploy Action Button */}
+        {/* Deploy Action Button (Floating Glass Active) */}
         <button
           onClick={handleDeployParser}
           disabled={isDeploying}
-          className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+          className="glass-btn-active flex items-center space-x-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-all hover:scale-102"
         >
           {isDeploying ? (
             <>
-              <Cpu className="w-4 h-4 animate-spin" />
+              <Cpu className="w-4 h-4 animate-spin text-white" />
               <span>Compiling VRL...</span>
             </>
           ) : (
             <>
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 text-white" />
               <span>Deploy Parser to Vector</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Preloaded Presets Bar */}
-      <div className="mb-5 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs font-bold text-slate-700 flex items-center gap-2 uppercase font-mono">
-          <Play className="w-3.5 h-3.5 text-blue-600" />
+      {/* Preloaded Presets Bar (Glass Pill Container) */}
+      <div className="mb-5 glass-pill p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 uppercase font-mono">
+          <Play className="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400" />
           Quick Load Vendor Presets:
         </span>
-        <div className="flex items-center space-x-2 flex-wrap">
+        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
           {PRESETS.map(p => (
             <button
               key={p.id}
               onClick={() => loadPreset(p.id)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer flex items-center space-x-2 transition-all ${
                 selectedPresetId === p.id
-                  ? 'bg-blue-50 text-blue-700 border border-blue-300 shadow-sm font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+                  ? 'glass-btn-active font-bold'
+                  : 'glass-btn hover:text-blue-600 dark:hover:text-cyan-400'
               }`}
             >
               <span>{p.name}</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
+              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                selectedPresetId === p.id 
+                  ? 'bg-white/20 text-white font-bold' 
+                  : 'bg-slate-200/80 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-bold'
+              }`}>
                 {p.badge}
               </span>
             </button>
@@ -264,35 +283,35 @@ export const AiMapper: React.FC = () => {
       {/* Form Fields */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
             Parser Identifier Name
           </label>
           <input
             type="text"
             value={parserName}
             onChange={(e) => setParserName(e.target.value)}
-            className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 outline-none"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 dark:text-slate-100 outline-none"
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
             Device Source Identifier
           </label>
           <input
             type="text"
             value={sourceType}
             onChange={(e) => setSourceType(e.target.value)}
-            className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 outline-none"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 dark:text-slate-100 outline-none"
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
             Wire Format
           </label>
           <select
             value={wireFormat}
             onChange={(e) => setWireFormat(e.target.value)}
-            className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 outline-none cursor-pointer"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2.5 text-xs font-mono font-semibold text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
           >
             <option value="CEF">Common Event Format (CEF)</option>
             <option value="SYSLOG">RFC 5424/3164 Syslog</option>
@@ -305,7 +324,7 @@ export const AiMapper: React.FC = () => {
       {/* Raw Sample Payload */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span>Sample Wire Log Payload</span>
             {aiConfidence && (
               <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
@@ -317,7 +336,7 @@ export const AiMapper: React.FC = () => {
             type="button"
             onClick={handleAiInferSchema}
             disabled={isInferring}
-            className="flex items-center space-x-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-all disabled:opacity-50"
+            className="glass-btn-active flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer disabled:opacity-50 transition-all hover:scale-102"
             title="Use AI Pattern Recognition to automatically detect source, format, and map fields"
           >
             <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isInferring ? 'animate-spin' : ''}`} />
@@ -328,23 +347,23 @@ export const AiMapper: React.FC = () => {
           rows={2}
           value={rawSample}
           onChange={(e) => setRawSample(e.target.value)}
-          className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-3 text-xs font-mono text-slate-800 outline-none"
+          className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-3 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none"
           placeholder="Paste any custom/unknown raw log string here..."
         />
       </div>
 
       {/* Semantic Projection Matrix */}
-      <div className="bg-slate-50 p-4.5 rounded-xl border border-slate-200 mb-5">
+      <div className="bg-slate-50 dark:bg-slate-900/60 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 mb-5">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 font-mono">
-            <Workflow className="w-4 h-4 text-blue-600" />
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2 font-mono">
+            <Workflow className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
             Device-to-OCSF Semantic Projection Matrix
           </span>
           <button
             onClick={addMappingRow}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold border border-slate-200 transition cursor-pointer shadow-xs"
+            className="glass-btn flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
             <span>Add Field Mapping</span>
           </button>
         </div>
@@ -357,13 +376,13 @@ export const AiMapper: React.FC = () => {
                 placeholder="Device Field (e.g. src)"
                 value={m.sourceKey}
                 onChange={(e) => updateMappingRow(idx, 'sourceKey', e.target.value)}
-                className="flex-1 bg-white border border-slate-300 focus:border-blue-600 rounded-lg p-2 text-xs font-mono text-slate-900 outline-none"
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none"
               />
-              <span className="text-slate-400 text-xs font-mono font-bold">&rarr;</span>
+              <span className="text-slate-400 dark:text-slate-500 text-xs font-mono font-bold">&rarr;</span>
               <select
                 value={m.ocsfPath}
                 onChange={(e) => updateMappingRow(idx, 'ocsfPath', e.target.value)}
-                className="flex-1 bg-white border border-slate-300 focus:border-blue-600 rounded-lg p-2 text-xs font-mono text-slate-900 outline-none cursor-pointer"
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
               >
                 {OCSF_TARGET_FIELDS.map(f => (
                   <option key={f.value} value={f.value}>{f.label}</option>
@@ -371,7 +390,7 @@ export const AiMapper: React.FC = () => {
               </select>
               <button
                 onClick={() => removeMappingRow(idx)}
-                className="p-2 text-slate-400 hover:text-rose-600 transition cursor-pointer rounded-lg hover:bg-rose-50"
+                className="p-2 text-slate-400 hover:text-rose-600:text-rose-400 transition cursor-pointer rounded-lg hover:bg-rose-50:bg-rose-950/50"
                 title="Remove"
               >
                 <Trash2 className="w-4 h-4" />
@@ -434,7 +453,7 @@ export const AiMapper: React.FC = () => {
                 <FileCode className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Generated Vector Remap Language (VRL) Artifact in /vector:</span>
               </div>
-              <pre className="bg-slate-900 text-emerald-400 p-3.5 rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto max-h-40 leading-relaxed">
+              <pre className="bg-slate-900 text-emerald-400 p-3.5 rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto max-h-40 leading-relaxed shadow-inner">
                 {deployResult.vrlPreview}
               </pre>
             </div>

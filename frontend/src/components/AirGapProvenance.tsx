@@ -11,25 +11,47 @@ import {
   Eye,
   Sliders,
   ArrowRight,
-  Sparkles,
   Database,
   Search,
   Scale,
   Download
 } from 'lucide-react';
 import type { ULPFLogRecord } from '../types';
+import { useToast } from '../context/ToastContext';
+import { getAuthenticatedUrl } from '../utils/api';
 
-// RFC 6234 standard SHA-256 implementation for non-secure HTTP contexts where crypto.subtle is blocked
-function pureJsSha256(ascii: string): string {
+// RFC 6234 standard SHA-256 implementation supporting UTF-8 byte sequences
+function pureJsSha256(input: string): string {
   function rightRotate(value: number, amount: number) {
     return (value >>> amount) | (value << (32 - amount));
   }
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
   let result = '';
 
+  // Encode UTF-8 bytes safely
+  const bytes: number[] = [];
+  for (let ci = 0; ci < input.length; ci++) {
+    let charCode = input.charCodeAt(ci);
+    if (charCode < 0x80) {
+      bytes.push(charCode);
+    } else if (charCode < 0x800) {
+      bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
+    } else if (charCode < 0xd800 || charCode >= 0xe000) {
+      bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
+    } else {
+      // UTF-16 surrogate pair
+      ci++;
+      charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (input.charCodeAt(ci) & 0x3ff));
+      bytes.push(
+        0xf0 | (charCode >> 18),
+        0x80 | ((charCode >> 12) & 0x3f),
+        0x80 | ((charCode >> 6) & 0x3f),
+        0x80 | (charCode & 0x3f)
+      );
+    }
+  }
+
   const words: number[] = [];
-  const asciiBitLength = ascii.length * 8;
+  const byteBitLength = bytes.length * 8;
   const hash = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
@@ -45,12 +67,11 @@ function pureJsSha256(ascii: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  let i = 0;
-  for (; i < ascii.length; i++) {
-    words[i >> 2] |= (ascii.charCodeAt(i) & 0xff) << (24 - (i % 4) * 8);
+  for (let i = 0; i < bytes.length; i++) {
+    words[i >> 2] |= (bytes[i] & 0xff) << (24 - (i % 4) * 8);
   }
-  words[i >> 2] |= 0x80 << (24 - (i % 4) * 8);
-  words[(((ascii.length + 8) >> 6) << 4) + 15] = asciiBitLength;
+  words[bytes.length >> 2] |= 0x80 << (24 - (bytes.length % 4) * 8);
+  words[(((bytes.length + 8) >> 6) << 4) + 15] = byteBitLength;
 
   for (let j = 0; j < words.length; j += 16) {
     const w = words.slice(j, j + 16);
@@ -96,6 +117,7 @@ interface ProvenanceProps {
 }
 
 export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
+  const { showToast } = useToast();
   const [testInput, setTestInput] = useState(
     `<164>Oct 24 10:20:30 ciscoasa: %ASA-4-106023: Denied tcp src inside:198.51.100.23/50901 dst outside:198.51.100.10/22 by access-group 'OUTSIDE_IN' [ref: 452189023412]`
   );
@@ -116,17 +138,23 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         setCalcResult(hashHex);
+        showToast('SHA-256 Calculated', `${hashHex.substring(0, 16)}...`, 'info');
         return;
       }
-      setCalcResult(pureJsSha256(testInput));
+      const digest = pureJsSha256(testInput);
+      setCalcResult(digest);
+      showToast('SHA-256 Calculated', `${digest.substring(0, 16)}...`, 'info');
     } catch {
-      setCalcResult(pureJsSha256(testInput));
+      const digest = pureJsSha256(testInput);
+      setCalcResult(digest);
+      showToast('SHA-256 Calculated', `${digest.substring(0, 16)}...`, 'info');
     }
   };
 
   const copyHash = (hash: string) => {
     navigator.clipboard.writeText(hash);
     setIsCopied(true);
+    showToast('Hash Copied', 'SHA-256 fingerprint copied to clipboard', 'success');
     setTimeout(() => setIsCopied(false), 2000);
   };
 
@@ -145,22 +173,22 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
   return (
     <div className="space-y-6">
       {/* 1. Header Banner & High-Level Proofs */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+      <div className="bg-white/95 dark:bg-slate-900/90 border border-stone-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs transition-colors duration-200">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-stone-100 dark:border-slate-800">
           <div className="flex items-center space-x-3.5">
-            <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-xs">
+            <div className="p-2.5 rounded-2xl bg-amber-500 dark:bg-cyan-500 text-white shadow-xs">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-base font-extrabold text-slate-900 uppercase tracking-wider font-mono">
+                <h2 className="text-base font-extrabold text-stone-900 dark:text-white uppercase tracking-wider font-mono">
                   Lossless Event Verification & Forensic Provenance Fabric
                 </h2>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
+                <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-100 dark:bg-cyan-950/60 text-amber-800 dark:text-cyan-300 border border-amber-200 dark:border-cyan-800 font-bold">
                   Lossless Non-Repudiation Standard
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
                 Mathematical guarantee: 100% Raw Wire Payload preserved in Base64 + Bit-identical SHA-256 Non-Repudiation Seal before any normalization
               </p>
             </div>
@@ -170,20 +198,21 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
             <button
               onClick={() => {
                 const targetId = auditLog?.id || auditLog?.traceability?.raw_sha256 || 'latest_event';
-                window.open(`http://localhost:8000/api/export-forensic/${targetId}`, '_blank');
+                showToast('Exporting Bundle', `Packaging forensic evidence for event ${targetId.substring(0, 10)}...`, 'info');
+                window.open(getAuthenticatedUrl(`/api/export-forensic/${targetId}`), '_blank');
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-              title="Download RFC 3161 Court-Admissible Forensic Bundle (.zip with signed manifest)"
+              className="glass-btn-active px-4 py-2 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition hover:scale-102"
+              title="Download SHA-256 integrity-hashed evidence bundle (.zip with signed manifest)"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-white" />
               <span>Export Forensic Evidence Bundle (.zip)</span>
             </button>
-            <span className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-mono font-bold flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              Lossless Audit Certified
+            <span className="px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              Lossless Certified
             </span>
-            <span className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-xs font-mono font-bold flex items-center gap-1.5">
-              <Lock className="w-4 h-4 text-slate-600" />
+            <span className="px-3.5 py-1.5 rounded-full bg-stone-100 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300 text-xs font-mono font-bold flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-stone-600 dark:text-slate-400" />
               Air-Gapped (0 Egress)
             </span>
           </div>
@@ -191,31 +220,31 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
 
         {/* 4 Lossless Telemetry Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-5">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="bg-stone-50/70 dark:bg-slate-800/60 border border-stone-200/80 dark:border-slate-700/80 rounded-2xl p-4">
+            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-slate-400 mb-1">
               <span className="font-bold uppercase tracking-wider font-mono">Information Loss</span>
-              <Scale className="w-4 h-4 text-blue-600" />
+              <Scale className="w-4 h-4 text-amber-600 dark:text-cyan-400" />
             </div>
-            <div className="text-2xl font-black text-emerald-700 font-mono">
+            <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono">
               0.00%
             </div>
-            <span className="text-[11px] text-slate-600 block mt-1">
+            <span className="text-[11px] text-stone-600 dark:text-slate-300 block mt-1">
               Zero truncation or field drop
             </span>
-            <span className="text-[10px] text-emerald-700 mt-0.5 block font-mono font-bold">
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 block font-mono font-bold">
               Pure lossless wire capture
             </span>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="bg-stone-50/70 dark:bg-slate-800/60 border border-stone-200/80 dark:border-slate-700/80 rounded-2xl p-4">
+            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-slate-400 mb-1">
               <span className="font-bold uppercase tracking-wider font-mono">Non-Repudiation</span>
-              <Fingerprint className="w-4 h-4 text-emerald-600" />
+              <Fingerprint className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="text-2xl font-black text-slate-900 font-mono">
+            <div className="text-2xl font-black text-stone-900 dark:text-white font-mono">
               SHA-256
             </div>
-            <span className="text-[11px] text-slate-600 block mt-1">
+            <span className="text-[11px] text-stone-600 dark:text-slate-300 block mt-1">
               Immutable per-event fingerprint
             </span>
             <span className="text-[10px] text-blue-600 mt-0.5 block font-mono font-bold">
@@ -223,34 +252,34 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
             </span>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
               <span className="font-bold uppercase tracking-wider font-mono">Traceability Link</span>
-              <Database className="w-4 h-4 text-indigo-600" />
+              <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             </div>
-            <div className="text-2xl font-black text-indigo-700 font-mono">
+            <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 font-mono">
               1:1 Bi-directional
             </div>
-            <span className="text-[11px] text-slate-600 block mt-1">
+            <span className="text-[11px] text-slate-600 dark:text-slate-300 block mt-1">
               Normalized OCSF ⟷ Raw wire
             </span>
-            <span className="text-[10px] text-indigo-700 mt-0.5 block font-mono font-bold">
+            <span className="text-[10px] text-indigo-700 dark:text-indigo-400 mt-0.5 block font-mono font-bold">
               Pointer + Base64 storage
             </span>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
               <span className="font-bold uppercase tracking-wider font-mono">Air-Gap Ring Buffer</span>
-              <HardDrive className="w-4 h-4 text-slate-600" />
+              <HardDrive className="w-4 h-4 text-slate-600 dark:text-slate-400" />
             </div>
-            <div className="text-2xl font-black text-slate-900 font-mono">
-              2,048 <span className="text-xs font-normal text-slate-500">MB</span>
+            <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+              2,048 <span className="text-xs font-normal text-slate-500 dark:text-slate-400">MB</span>
             </div>
-            <span className="text-[11px] text-slate-600 block mt-1">
+            <span className="text-[11px] text-slate-600 dark:text-slate-300 block mt-1">
               Zero dropped logs under burst
             </span>
-            <span className="text-[10px] text-slate-500 mt-0.5 block font-mono font-bold">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block font-mono font-bold">
               Disk-backed FIFO queue
             </span>
           </div>
@@ -258,15 +287,15 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
       </div>
 
       {/* 2. Interactive "SHOW LOSSLESS" Visual Proof Inspector */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between pb-4 mb-4 border-b border-slate-200 gap-2">
+      <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs transition-colors duration-200">
+        <div className="flex flex-wrap items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-slate-800 gap-2">
           <div className="flex items-center space-x-2">
-            <Eye className="w-4 h-4 text-blue-600" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
+            <Eye className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
               Interactive Lossless Verification Engine (Demonstrate to Evaluators)
             </h3>
           </div>
-          <span className="text-xs text-slate-500 font-mono">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
             Click any event below to load its full lossless comparative audit
           </span>
         </div>
@@ -274,36 +303,36 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
         {/* Side-by-Side Lossless Proof Comparison */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column: Raw Wire Payload & Evidence */}
-          <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50 space-y-3">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4.5 bg-slate-50 dark:bg-slate-800/60 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 font-mono">
-                <FileCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5 font-mono">
+                <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400" />
                 Step 1: Original Raw Wire Ingestion (Lossless)
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800">
                 Pristine
               </span>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-500 uppercase font-mono block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono block mb-1">
                 Raw Wire String (as received over network UDP 514):
               </label>
-              <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-xs break-all leading-relaxed shadow-inner">
+              <div className="bg-slate-900 dark:bg-slate-950 text-slate-100 p-3 rounded-lg font-mono text-xs break-all leading-relaxed shadow-inner border border-slate-800">
                 {auditTrace?.sanitized_raw || auditLog?.traceability?.sanitized_raw || 'No payload selected'}
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-500 uppercase font-mono block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono block mb-1">
                 Deterministic SHA-256 Non-Repudiation Fingerprint:
               </label>
-              <div className="bg-white border border-slate-300 p-2.5 rounded-lg font-mono text-xs text-blue-700 font-bold break-all select-all flex items-center justify-between">
+              <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2.5 rounded-lg font-mono text-xs text-blue-700 dark:text-cyan-400 font-bold break-all select-all flex items-center justify-between">
                 <span>{auditTrace?.raw_sha256 || '00000000000000000000000000000000'}</span>
                 <button
                   type="button"
                   onClick={() => copyHash(auditTrace?.raw_sha256 || '')}
-                  className="ml-2 text-slate-500 hover:text-slate-900 text-[11px] uppercase font-bold"
+                  className="ml-2 text-slate-500 hover:text-slate-900 dark:hover:text-white text-[11px] uppercase font-bold cursor-pointer"
                 >
                   Copy
                 </button>
@@ -311,134 +340,134 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-500 uppercase font-mono block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono block mb-1">
                 Base64 Lossless Archival Storage:
               </label>
-              <div className="bg-white border border-slate-300 p-2 rounded-lg font-mono text-[11px] text-slate-600 break-all max-h-20 overflow-y-auto">
+              <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2 rounded-lg font-mono text-[11px] text-slate-800 dark:text-slate-200 break-all max-h-20 overflow-y-auto">
                 {auditTrace?.raw_base64 || 'No Base64 data'}
               </div>
             </div>
           </div>
 
-          {/* Right Column: Normalized OCSF Projection & Field Mapping */}
-          <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 font-mono">
-                <Sliders className="w-3.5 h-3.5 text-emerald-600" />
-                Step 2: Normalized OCSF Taxonomy Projection
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                Class {auditNorm?.class_uid || 4001}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <span className="text-slate-500 text-[10px] block uppercase font-bold">Source IP</span>
-                <span className="text-slate-900 font-bold">{auditNorm?.src_endpoint?.ip || '0.0.0.0'}</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <span className="text-slate-500 text-[10px] block uppercase font-bold">Destination IP</span>
-                <span className="text-slate-900 font-bold">{auditNorm?.dst_endpoint?.ip || '0.0.0.0'}</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <span className="text-slate-500 text-[10px] block uppercase font-bold">Activity / Action</span>
-                <span className="text-slate-900 font-bold truncate block">{auditNorm?.activity_name || 'Event'}</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                <span className="text-slate-500 text-[10px] block uppercase font-bold">Threat Intel</span>
-                <span className={auditNorm?.enrichment?.is_malicious ? 'text-rose-600 font-bold' : 'text-emerald-700 font-bold'}>
-                  {auditNorm?.enrichment?.threat_actor || 'Benign'}
+            {/* Right Column: Normalized OCSF Projection & Field Mapping */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4.5 bg-slate-50 dark:bg-slate-800/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5 font-mono">
+                  <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Step 2: Normalized OCSF Taxonomy Projection
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                  Class {auditNorm?.class_uid || 4001}
                 </span>
               </div>
-            </div>
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-500 uppercase font-mono block mb-1">
-                Complete OCSF v1.1.0 Standard Payload:
-              </label>
-              <pre className="bg-slate-900 text-emerald-400 p-3 rounded-lg font-mono text-[11px] max-h-36 overflow-y-auto leading-relaxed shadow-inner">
-                {JSON.stringify(auditNorm, null, 2)}
-              </pre>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Live Wire-Hash Calculator Terminal */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div className="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-200">
-          <Fingerprint className="w-4 h-4 text-blue-600" />
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
-            Evidentiary Wire-Hash Validator (Prove Cryptographic Non-Repudiation Live)
-          </h3>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 font-mono">
-              Test Raw Wire String to Hash & Verify:
-            </label>
-            <input
-              type="text"
-              value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
-              className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-2.5 text-xs font-mono text-slate-900 outline-none"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <button
-              type="button"
-              onClick={calculateHash}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs font-mono transition cursor-pointer shadow-xs"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Compute SHA-256 Digest</span>
-            </button>
-            <span className="text-xs text-slate-500 font-mono">
-              Matches Vector VRL <code className="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700 font-bold">sha256(raw_msg)</code>
-            </span>
-          </div>
-
-          {calcResult && (
-            <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 font-mono text-xs text-blue-900 break-all flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-bold">Cryptographic Digest:</span>
-                <span className="font-bold select-all text-blue-700">{calcResult}</span>
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px] block uppercase font-bold">Source IP</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{auditNorm?.src_endpoint?.ip || '0.0.0.0'}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px] block uppercase font-bold">Destination IP</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{auditNorm?.dst_endpoint?.ip || '0.0.0.0'}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px] block uppercase font-bold">Activity / Action</span>
+                  <span className="text-slate-900 dark:text-white font-bold truncate block">{auditNorm?.activity_name || 'Event'}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px] block uppercase font-bold">Threat Intel</span>
+                  <span className={auditNorm?.enrichment?.is_malicious ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-400 font-bold'}>
+                    {auditNorm?.enrichment?.threat_actor || 'Benign'}
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => copyHash(calcResult)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition ml-3 shrink-0 font-bold"
-              >
-                {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : 'Copy'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* 4. Immutable Provenance Ledger */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-slate-200 gap-2">
-          <div className="flex items-center space-x-2">
-            <FileCheck className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
-              Immutable Traceability Audit Ledger
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase font-mono block mb-1">
+                  Complete OCSF v1.1.0 Standard Payload:
+                </label>
+                <pre className="bg-slate-900 dark:bg-slate-950 text-emerald-400 p-3 rounded-lg font-mono text-[11px] max-h-36 overflow-y-auto leading-relaxed shadow-inner border border-slate-800">
+                  {JSON.stringify(auditNorm, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Live Wire-Hash Calculator Terminal */}
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs transition-colors duration-200">
+          <div className="flex items-center space-x-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-800">
+            <Fingerprint className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+              Evidentiary Wire-Hash Validator (Prove Cryptographic Non-Repudiation Live)
             </h3>
           </div>
-          <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search hash or payload..."
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              className="bg-white border border-slate-300 text-xs pl-8.5 pr-3 py-1 rounded-lg text-slate-900 placeholder-slate-400 w-56 outline-none"
-            />
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 font-mono">
+                Test Raw Wire String to Hash & Verify:
+              </label>
+              <input
+                type="text"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 rounded-lg p-2.5 text-xs font-mono text-slate-900 dark:text-slate-100 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={calculateHash}
+                className="glass-btn-active flex items-center space-x-2 px-4 py-2 rounded-xl text-white font-bold text-xs font-mono cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-white" />
+                <span>Compute SHA-256 Digest</span>
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                Matches Vector VRL <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-700 dark:text-cyan-300 font-bold border border-slate-200 dark:border-slate-700">sha256(raw_msg)</code>
+              </span>
+            </div>
+
+            {calcResult && (
+              <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 font-mono text-xs text-blue-900 dark:text-blue-200 break-all flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Cryptographic Digest:</span>
+                  <span className="font-bold select-all text-blue-700 dark:text-cyan-300">{calcResult}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyHash(calcResult)}
+                  className="glass-btn px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 transition ml-3 shrink-0 font-bold cursor-pointer"
+                >
+                  {isCopied ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : 'Copy'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* 4. Immutable Provenance Ledger */}
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs transition-colors duration-200">
+          <div className="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-slate-200 dark:border-slate-800 gap-2">
+            <div className="flex items-center space-x-2">
+              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                Immutable Traceability Audit Ledger
+              </h3>
+            </div>
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search hash or payload..."
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs pl-8.5 pr-3 py-1.5 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 w-56 outline-none"
+              />
+            </div>
+          </div>
 
         <div className="space-y-2 font-mono text-xs">
           {filteredLogs.map((log, idx) => {
@@ -454,28 +483,28 @@ export const AirGapProvenance: React.FC<ProvenanceProps> = ({ logs }) => {
                 onClick={() => setSelectedAuditLog(log)}
                 className={`border rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 cursor-pointer transition ${
                   isSelected 
-                    ? 'bg-blue-50/80 border-blue-400 shadow-2xs' 
-                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                    ? 'bg-blue-50/80 dark:bg-blue-950/50 border-blue-400 dark:border-blue-700 shadow-2xs' 
+                    : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80'
                 }`}
               >
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
-                    <span className="text-blue-700 font-bold">{norm.metadata?.source_type || 'firewall'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
+                    <span className="text-blue-700 dark:text-cyan-400 font-bold">{norm.metadata?.source_type || 'firewall'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium">
                       {norm.category_name || 'Network Activity'}
                     </span>
-                    <span className="text-slate-400 text-xs font-sans">
+                    <span className="text-slate-500 dark:text-slate-400 text-xs font-sans">
                       {timeStr}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-600 truncate font-mono">
+                  <div className="text-xs text-slate-700 dark:text-slate-300 truncate font-mono">
                     {trace.sanitized_raw || ''}
                   </div>
                 </div>
 
                 <div className="text-right shrink-0 flex items-center space-x-3">
                   <div>
-                    <div className="text-xs text-emerald-700 font-mono select-all font-bold">
+                    <div className="text-xs text-emerald-700 dark:text-emerald-400 font-mono select-all font-bold">
                       SHA-256: {shaPrefix}...
                     </div>
                     <div className="text-[11px] text-slate-500 mt-0.5">

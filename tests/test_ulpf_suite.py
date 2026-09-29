@@ -31,18 +31,28 @@ from fastapi.testclient import TestClient
 class TestULPFFramework(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = TestClient(app)
+        cls.client = TestClient(app, headers={"X-API-Key": "ulpf_admin_secret_key_2026"})
 
     def test_a_lossless_preservation(self):
-        """Criterion (a): Complete raw event data preserved without information loss."""
+        """Criterion (a): Complete raw event data preserved and verified via round-trip reconstruction."""
+        from reconstruction_verifier import verify_reconstruction
         raw_wire = "<164>Oct 24 10:20:30 ciscoasa: %ASA-4-106023: Denied tcp src 198.51.100.23/50901 dst 10.0.0.1/80"
-        b64 = base64.b64encode(raw_wire.encode("utf-8")).decode("utf-8")
-        sha = hashlib.sha256(raw_wire.encode("utf-8")).hexdigest()
-
-        # Decode back to verify 100% bit-exact lossless recovery
-        recovered = base64.b64decode(b64.encode("utf-8")).decode("utf-8")
-        self.assertEqual(recovered, raw_wire, "Lossless recovery must match original wire string exactly")
-        self.assertEqual(len(sha), 64, "SHA-256 fingerprint must be 64 hexadecimal characters")
+        parsed_record = {
+            "prival": "164",
+            "timestamp": "Oct 24 10:20:30",
+            "host": "ciscoasa",
+            "tag": "%ASA-4-106023",
+            "action": "Denied",
+            "proto": "tcp",
+            "src": "198.51.100.23/50901",
+            "dst": "10.0.0.1/80"
+        }
+        rule = {
+            "reverse_template": "<{prival}>{timestamp} {host}: {tag}: {action} {proto} src {src} dst {dst}"
+        }
+        result = verify_reconstruction(raw_wire.encode("utf-8"), parsed_record, rule)
+        self.assertEqual(result["verdict"], "pass", f"Reconstruction failed: {result.get('diff')}")
+        self.assertIsNone(result["diff"])
 
     def test_b_c_attribute_extraction_and_ocsf(self):
         """Criteria (b & c): Extract source attributes and normalize to OCSF taxonomy."""
@@ -135,13 +145,38 @@ class TestULPFFramework(unittest.TestCase):
         self.assertEqual(THREAT_INTEL["198.51.100.23"]["threat_group"], "APT29")
 
     def test_pii_aadhaar_redaction(self):
-        """Mandatory Privacy: Indian Aadhaar 12-digit and 4-4-4 formatted in-memory scrubbing."""
-        text_with_aadhaar = "Customer KYC session_id=99281 aadhaar=982345129081 approved ref=4521 7890 2341 dash=9823-4512-9081"
-        sanitized = re.sub(r"\b\d{4}[ -]?\d{4}[ -]?\d{4}\b", "[REDACTED_AADHAAR]", text_with_aadhaar)
-        self.assertNotIn("982345129081", sanitized)
-        self.assertNotIn("4521 7890 2341", sanitized)
-        self.assertNotIn("9823-4512-9081", sanitized)
+        """Mandatory Privacy: Indian Aadhaar 12-digit and 4-4-4 formatted in-memory scrubbing with Verhoeff validation."""
+        from pii_redactor import redact_pii, generate_verhoeff_checksum
+        aadhaar_1 = "98234512908" + generate_verhoeff_checksum("98234512908")
+        aadhaar_2 = "45217890234" + generate_verhoeff_checksum("45217890234")
+        formatted_2 = f"{aadhaar_2[:4]} {aadhaar_2[4:8]} {aadhaar_2[8:]}"
+        dash_formatted = f"{aadhaar_1[:4]}-{aadhaar_1[4:8]}-{aadhaar_1[8:]}"
+
+        text_with_aadhaar = f"Customer KYC session_id=99281 aadhaar={aadhaar_1} approved ref={formatted_2} dash={dash_formatted}"
+        sanitized, entity_types = redact_pii(text_with_aadhaar)
+
+        self.assertNotIn(aadhaar_1, sanitized)
+        self.assertNotIn(formatted_2, sanitized)
+        self.assertNotIn(dash_formatted, sanitized)
         self.assertEqual(sanitized.count("[REDACTED_AADHAAR]"), 3)
+        self.assertIn("aadhaar", entity_types)
+
+    def test_historical_log_upload(self):
+        """Test POST /api/upload-historical with raw logs and CSV uploads."""
+        raw_log_content = (
+            "Oct 24 10:20:30 host1 sshd[1234]: Failed password for invalid user admin from 198.51.100.23 port 54321 ssh2\n"
+            "CEF:0|Imperva|WAF|14.0|SQLI|SQL Injection|9|src=198.51.100.23 dst=10.1.1.20\n"
+            "<164>Oct 24 10:20:30 ciscoasa: %ASA-4-106023: Denied tcp src 10.0.0.5/50901 dst 10.0.0.1/80\n"
+        )
+        files = {"file": ("historical_audit.log", raw_log_content.encode("utf-8"), "text/plain")}
+        res = self.client.post("/api/upload-historical", files=files)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["records_ingested"], 3)
+        self.assertEqual(len(data["sample_records"]), 3)
+        self.assertIn("normalized_data", data["sample_records"][0])
+        self.assertIn("traceability", data["sample_records"][0])
 
 
 if __name__ == "__main__":
