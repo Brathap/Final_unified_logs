@@ -258,7 +258,3 @@ This full-stack application can be deployed for **100% free**:
   - Runtime: `Python 3`
   - Build command: `pip install -r requirements.txt`
   - Start command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-
-### 2. Vercel (Frontend) + Koyeb / Railway (Backend)
-- Deploy the frontend to **Vercel** with the Vite preset.
-- Deploy the FastAPI backend to **Koyeb** (Free `nano` instance with native Python/Docker support and persistent SSE streaming).
