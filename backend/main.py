@@ -288,7 +288,7 @@ async def verify_event_merkle_proof(
     }
 
 
-@app.get("/")
+@app.get("/api/status")
 def read_root():
     return {
         "status": "online",
@@ -1494,7 +1494,8 @@ def verify_auth_token(user: AuthUser = Security(require_role(["admin", "operator
 
 
 # Static Frontend Asset Serving (Single Container & Air-Gapped Deployments)
-FRONTEND_DIST = os.path.join(PROJECT_ROOT, "frontend", "dist")
+FRONTEND_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
+
 if os.path.exists(FRONTEND_DIST):
     assets_dir = os.path.join(FRONTEND_DIST, "assets")
     if os.path.exists(assets_dir):
@@ -1512,7 +1513,8 @@ if os.path.exists(FRONTEND_DIST):
         if os.path.exists(index_file):
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend assets not found.")
-
+else:
+    print(f"[WARNING] React build folder not found at {FRONTEND_DIST}")
 
 
 
