@@ -1,19 +1,19 @@
 # Empirical Benchmark Report
 
 **Workload:** 50,000 live logs processed end-to-end  
-**Date:** 2026-10-05 05:47:51 UTC  
+**Date:** 2026-10-05 05:58:41 UTC  
 
 ### Performance Metrics (Measured)
-* **Ingestion Velocity:** **9,355 EPS**
-* **Total Execution Time:** 5.345 seconds
-* **Latency p50:** 98.28 µs
-* **Latency p95:** 130.15 µs
-* **Latency p99:** 159.71 µs
-* **Peak Latency:** 795.47 µs
-* **Merkle Batch Checkpoint (1,000 leaves):** 10.63 ms (Root: `a950476237828b1f...`)
+* **Ingestion Velocity:** **4,686 EPS**
+* **Total Execution Time:** 10.669 seconds
+* **Latency p50:** 202.82 µs
+* **Latency p95:** 256.96 µs
+* **Latency p99:** 296.01 µs
+* **Peak Latency:** 1639.42 µs
+* **Merkle Batch Checkpoint (1,000 leaves):** 20.72 ms (Root: `a950476237828b1f...`)
 
 ### Resource Efficiency
-* **User CPU Time:** 5.205 s
-* **System CPU Time:** 0.036 s
+* **User CPU Time:** 10.344 s
+* **System CPU Time:** 0.076 s
 * **Peak Resident RAM:** 489.7 MB
 * **Memory Safety:** Zero external process leakage, strict in-memory GC efficiency
