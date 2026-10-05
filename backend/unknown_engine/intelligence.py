@@ -88,45 +88,104 @@ class FieldInferencer:
     SEMANTIC_RULES = [
         {
             "field": "src_endpoint.ip",
-            "regex": re.compile(r'(?:src(?:_ip)?|from|source)[\s:=]+((?:\d{1,3}\.){3}\d{1,3})', re.IGNORECASE),
+            "regex": re.compile(r'(?:src(?:_ip)?|from|source|client_ip|actor\.ip)[\s:=]+["\']?((?:\d{1,3}\.){3}\d{1,3})["\']?', re.IGNORECASE),
             "confidence": 0.95,
             "explanation": "Preceded by source identifier prefix and matches valid IPv4 syntax."
         },
         {
             "field": "dst_endpoint.ip",
-            "regex": re.compile(r'(?:dst(?:_ip)?|to|destination)[\s:=]+((?:\d{1,3}\.){3}\d{1,3})', re.IGNORECASE),
+            "regex": re.compile(r'(?:dst(?:_ip)?|to|destination|srv_ip|server_ip|target\.ip)[\s:=]+["\']?((?:\d{1,3}\.){3}\d{1,3})["\']?', re.IGNORECASE),
             "confidence": 0.95,
             "explanation": "Preceded by destination identifier prefix and matches valid IPv4 syntax."
         },
         {
             "field": "src_endpoint.port",
-            "regex": re.compile(r'(?:spt|src_port|sport)[\s:=]+(\d{1,5})', re.IGNORECASE),
+            "regex": re.compile(r'(?:spt|src_port|sport|s_port)[\s:=]+["\']?(\d{1,5})["\']?', re.IGNORECASE),
             "confidence": 0.90,
             "explanation": "Source port key or suffix matching valid port range."
         },
         {
             "field": "dst_endpoint.port",
-            "regex": re.compile(r'(?:dpt|dst_port|dport)[\s:=]+(\d{1,5})', re.IGNORECASE),
+            "regex": re.compile(r'(?:dpt|dst_port|dport|d_port)[\s:=]+["\']?(\d{1,5})["\']?', re.IGNORECASE),
             "confidence": 0.90,
             "explanation": "Destination port key or suffix matching valid port range."
         },
         {
             "field": "user.name",
-            "regex": re.compile(r'(?:user(?:name)?|usr|login)[\s:=]+([a-zA-Z0-9_\-\.]+)', re.IGNORECASE),
+            "regex": re.compile(r'(?:user(?:name)?|usr|login|actor\.user)[\s:=]+["\']?([a-zA-Z0-9_\-\.]+)["\']?', re.IGNORECASE),
             "confidence": 0.88,
             "explanation": "Preceded by user identity prefix."
         },
         {
             "field": "activity_name",
-            "regex": re.compile(r'\b(Accepted|Failed|Denied|Blocked|Connected|Disconnected|Teardown|Built)\b', re.IGNORECASE),
+            "regex": re.compile(r'\b(Accepted|Failed|Denied|Blocked|Connected|Disconnected|Teardown|Built|Drop|create)\b', re.IGNORECASE),
             "confidence": 0.85,
             "explanation": "Matches standard security state action keyword."
+        },
+        {
+            "field": "network_protocol",
+            "regex": re.compile(r'(?:proto(?:col)?)[\s:=]+["\']?([a-zA-Z]+)["\']?', re.IGNORECASE),
+            "confidence": 0.88,
+            "explanation": "Identifies transport layer network protocol."
         }
     ]
 
     @classmethod
     def infer_fields(cls, raw_line: str) -> List[Dict[str, Any]]:
         results = []
+        # JSON special-cased extraction if valid JSON
+        trimmed = raw_line.strip()
+        if (trimmed.startswith("{") and trimmed.endswith("}")):
+            try:
+                data = json.loads(trimmed)
+                flattened = {}
+                def _flatten(obj, prefix=""):
+                    if isinstance(obj, dict):
+                        for k, v in obj.items():
+                            _flatten(v, f"{prefix}.{k}" if prefix else k)
+                    else:
+                        flattened[prefix] = str(obj)
+                _flatten(data)
+                
+                for k, v in flattened.items():
+                    k_lower = k.lower()
+                    if "src" in k_lower or "actor.ip" in k_lower or "client" in k_lower:
+                        if re.match(r'^(?:\d{1,3}\.){3}\d{1,3}$', v):
+                            pos = raw_line.find(v)
+                            results.append({
+                                "ocsf_field": "src_endpoint.ip",
+                                "extracted_value": v,
+                                "confidence": 0.98,
+                                "explanation": f"JSON key '{k}' mapped to source IP",
+                                "start": pos if pos != -1 else 0,
+                                "end": pos + len(v) if pos != -1 else len(v)
+                            })
+                    elif "dst" in k_lower or "target.ip" in k_lower or "server" in k_lower:
+                        if re.match(r'^(?:\d{1,3}\.){3}\d{1,3}$', v):
+                            pos = raw_line.find(v)
+                            results.append({
+                                "ocsf_field": "dst_endpoint.ip",
+                                "extracted_value": v,
+                                "confidence": 0.98,
+                                "explanation": f"JSON key '{k}' mapped to destination IP",
+                                "start": pos if pos != -1 else 0,
+                                "end": pos + len(v) if pos != -1 else len(v)
+                            })
+                    elif "user" in k_lower or "actor.user" in k_lower:
+                        pos = raw_line.find(v)
+                        results.append({
+                            "ocsf_field": "user.name",
+                            "extracted_value": v,
+                            "confidence": 0.92,
+                            "explanation": f"JSON key '{k}' mapped to user name",
+                            "start": pos if pos != -1 else 0,
+                            "end": pos + len(v) if pos != -1 else len(v)
+                        })
+                if results:
+                    return results
+            except Exception:
+                pass
+
         for rule in cls.SEMANTIC_RULES:
             match = rule["regex"].search(raw_line)
             if match:
@@ -155,15 +214,55 @@ class ProposalGenerator:
         template = TemplateClusterer.extract_template(first_log)
         inferred = FieldInferencer.infer_fields(first_log)
 
-        # Generate simple regex capturing tokens
-        regex_pattern = re.escape(template)
-        regex_pattern = regex_pattern.replace(r'\<IP\>', r'(?P<ip>[0-9.]+)')
-        regex_pattern = regex_pattern.replace(r'\<NUM\>', r'(?P<num>\d+)')
-        regex_pattern = regex_pattern.replace(r'\<TIMESTAMP\>', r'(?P<timestamp>\S+)')
+        # Generate robust regex capturing tokens with unique group names
+        # Handle multiple occurrences of IP, NUM, TIMESTAMP
+        regex_pattern = template
+        tokens_map = [
+            ('<TIMESTAMP>', r'(?P<timestamp>\S+)'),
+            ('<IP>', r'(?P<src_ip>[0-9.]+)', r'(?P<dst_ip>[0-9.]+)'),
+            ('<NUM>', r'(?P<src_port>\d+)', r'(?P<dst_port>\d+)'),
+        ]
+        
+        # Split tokens, escape static text, and keep groups
+        pattern_parts = []
+        token_regex = re.compile(r'(<TIMESTAMP>|<IP>|<NUM>|<PORT>|<HEX>|<MAC>|<HASH>)')
+        pieces = token_regex.split(template)
+        
+        counts = {"<TIMESTAMP>": 0, "<IP>": 0, "<NUM>": 0}
+        for piece in pieces:
+            if piece == "<TIMESTAMP>":
+                counts["<TIMESTAMP>"] += 1
+                pattern_parts.append(r'(?P<timestamp>\S+)')
+            elif piece == "<IP>":
+                counts["<IP>"] += 1
+                if counts["<IP>"] == 1:
+                    pattern_parts.append(r'(?P<src_ip>[0-9.]+)')
+                elif counts["<IP>"] == 2:
+                    pattern_parts.append(r'(?P<dst_ip>[0-9.]+)')
+                else:
+                    pattern_parts.append(r'[0-9.]+')
+            elif piece == "<NUM>":
+                counts["<NUM>"] += 1
+                if counts["<NUM>"] == 1:
+                    pattern_parts.append(r'(?P<src_port>\d+)')
+                elif counts["<NUM>"] == 2:
+                    pattern_parts.append(r'(?P<dst_port>\d+)')
+                else:
+                    pattern_parts.append(r'\d+')
+            elif piece in ["<PORT>", "<HEX>", "<MAC>", "<HASH>"]:
+                pattern_parts.append(r'\S+')
+            else:
+                pattern_parts.append(re.escape(piece))
+        
+        regex_pattern = "".join(pattern_parts)
 
-        mappings = {}
-        for item in inferred:
-            mappings[item["ocsf_field"]] = item["ocsf_field"].split(".")[-1]
+
+        mappings = {
+            "src_endpoint.ip": "src_ip",
+            "dst_endpoint.ip": "dst_ip",
+            "src_endpoint.port": "src_port",
+            "dst_endpoint.port": "dst_port",
+        }
 
         candidate_data = {
             "metadata": {
@@ -175,11 +274,11 @@ class ProposalGenerator:
                 "clustering_template": template
             },
             "detection": {
-                "match_regex": [re.escape(first_log[:30])]
+                "match_regex": [re.escape(first_log[:25])]
             },
             "parser": {
                 "type": "regex",
-                "pattern": regex_pattern[:150]
+                "pattern": regex_pattern
             },
             "ocsf": {
                 "class_uid": 4001,
@@ -191,4 +290,5 @@ class ProposalGenerator:
 
         header = "# Proposed Candidate Source Pack (Generated 100% Offline)\n"
         return header + yaml.safe_dump(candidate_data, sort_keys=False)
+
 

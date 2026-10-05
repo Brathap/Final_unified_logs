@@ -112,9 +112,11 @@ class SourcePack:
             "severity": extracted.get("severity", "Informational"),
         }
 
-        # Apply field mappings
+        # Apply field mappings and track mapped source fields
+        mapped_src_fields = set()
         for target_field, src_field in self.mappings.items():
             if src_field in extracted:
+                mapped_src_fields.add(src_field)
                 val = extracted[src_field]
                 # Dot notation assignment
                 parts = target_field.split(".")
@@ -125,7 +127,12 @@ class SourcePack:
                     curr = curr[p]
                 curr[parts[-1]] = val
 
+        # Retain all unmapped source-specific fields under unmapped
+        unmapped = {k: v for k, v in extracted.items() if k not in mapped_src_fields}
+        ocsf_out["unmapped"] = unmapped
+
         return extracted, ocsf_out
+
 
 
 class SourcePackRegistry:
