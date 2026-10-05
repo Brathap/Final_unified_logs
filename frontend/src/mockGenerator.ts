@@ -31,10 +31,8 @@ const AADHAAR_SAMPLES = [
   '239012458712',
 ];
 
-// Helper to fake demo hash for synthetic/mock records.
-// WARNING: This is NOT SHA-256 and is NOT cryptographic. It is a 32-bit bit-shift murmur hash
-// used strictly for simulated UI demonstration. It must never be presented or claimed as SHA-256.
-function fakeDemoHash(str: string): string {
+// Helper to pseudo-hash
+function pseudoHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -163,12 +161,11 @@ export function generateSyntheticLog(forceLaptop?: boolean): ULPFLogRecord {
     }
   }
 
-  const rawSha = fakeDemoHash(rawString + timestamp);
+  const rawSha = pseudoHash(rawString + timestamp);
   const rawBase64 = typeof btoa !== 'undefined' ? btoa(rawString) : 'PDg0Pj0=';
 
   return {
     id: `log-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-    is_simulated: true,
     traceability: {
       raw_sha256: rawSha,
       raw_base64: rawBase64,

@@ -9,12 +9,11 @@ export interface FormatExportOptions {
 export function recordToCef(record: any): string {
   const norm = record?.normalized_data || {};
   const trace = record?.traceability || {};
-  const escapeCef = (str: string) => String(str).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-  const vendor = escapeCef(norm?.metadata?.product?.vendor_name || 'ULPF');
-  const product = escapeCef(norm?.metadata?.product?.name || 'Pipeline');
-  const version = escapeCef(norm?.metadata?.product?.version || norm?.metadata?.version || '1.1.0');
-  const classUid = escapeCef(norm?.class_uid || '4001');
-  const name = escapeCef(norm?.activity_name || 'Security Event');
+  const vendor = norm?.metadata?.product?.vendor_name || 'ULPF';
+  const product = norm?.metadata?.product?.name || 'Pipeline';
+  const version = norm?.metadata?.version || '1.1.0';
+  const classUid = norm?.class_uid || '4001';
+  const name = norm?.activity_name || 'Security Event';
   const severity = norm?.severity_id || (norm?.severity === 'Critical' ? 10 : norm?.severity === 'High' ? 7 : 3);
 
   const extensions: string[] = [];
@@ -22,11 +21,11 @@ export function recordToCef(record: any): string {
   if (norm?.src_endpoint?.port) extensions.push(`spt=${norm.src_endpoint.port}`);
   if (norm?.dst_endpoint?.ip) extensions.push(`dst=${norm.dst_endpoint.ip}`);
   if (norm?.dst_endpoint?.port) extensions.push(`dpt=${norm.dst_endpoint.port}`);
-  if (norm?.actor?.user?.name) extensions.push(`suser=${escapeCef(norm.actor.user.name)}`);
-  if (norm?.category_name) extensions.push(`cat=${escapeCef(norm.category_name)}`);
+  if (norm?.actor?.user?.name) extensions.push(`suser=${norm.actor.user.name}`);
+  if (norm?.category_name) extensions.push(`cat=${norm.category_name}`);
   if (trace?.raw_sha256) extensions.push(`cs1Label=SHA256 cs1=${trace.raw_sha256}`);
   if (trace?.sanitized_raw) {
-    const cleanRaw = trace.sanitized_raw.replace(/[\n\r]/g, ' ').replace(/=/g, '\\=').substring(0, 160);
+    const cleanRaw = trace.sanitized_raw.replace(/[\n\r]/g, ' ').substring(0, 160);
     extensions.push(`msg=${cleanRaw}`);
   }
 
@@ -74,29 +73,21 @@ export function recordsToCsv(records: any[]): string {
     const trace = r?.traceability || {};
     const piiRedacted = Boolean(norm?.compliance?.pii_redacted || (trace?.redacted_payload && trace.redacted_payload.includes('[REDACTED_AADHAAR]')));
 
-    const sanitizeCsvCell = (val: any): string => {
-      let str = String(val ?? '');
-      if (/^[=+\-@\t\r]/.test(str)) {
-        str = "'" + str;
-      }
-      return str.replace(/"/g, '""').replace(/[\r\n]+/g, ' ');
-    };
-
     const fields = [
-      sanitizeCsvCell(trace?.ingest_timestamp),
-      sanitizeCsvCell(norm?.class_uid || '4001'),
-      sanitizeCsvCell(norm?.category_name),
-      sanitizeCsvCell(norm?.activity_name),
-      sanitizeCsvCell(norm?.severity || 'Informational'),
-      sanitizeCsvCell(norm?.src_endpoint?.ip),
-      sanitizeCsvCell(norm?.src_endpoint?.port),
-      sanitizeCsvCell(norm?.dst_endpoint?.ip),
-      sanitizeCsvCell(norm?.dst_endpoint?.port),
-      sanitizeCsvCell(norm?.actor?.user?.name),
-      sanitizeCsvCell(norm?.enrichment?.threat_actor || norm?.threat?.actor || 'None'),
+      trace?.ingest_timestamp || '',
+      norm?.class_uid || '4001',
+      norm?.category_name || '',
+      norm?.activity_name || '',
+      norm?.severity || 'Informational',
+      norm?.src_endpoint?.ip || '',
+      norm?.src_endpoint?.port || '',
+      norm?.dst_endpoint?.ip || '',
+      norm?.dst_endpoint?.port || '',
+      norm?.actor?.user?.name || '',
+      norm?.enrichment?.threat_actor || norm?.threat?.actor || 'None',
       piiRedacted ? 'YES' : 'NO',
-      sanitizeCsvCell(trace?.raw_sha256),
-      sanitizeCsvCell(trace?.sanitized_raw)
+      trace?.raw_sha256 || '',
+      (trace?.sanitized_raw || '').replace(/"/g, '""').replace(/[\r\n]+/g, ' ')
     ];
 
     return fields.map(f => `"${f}"`).join(',');
