@@ -1,59 +1,66 @@
-# ULPF SIH26156 Demo Script: The Adaptive Source Intelligence Loop
-
-**Target Presentation Window:** 2 Minutes  
-**Command:** `python ulpf.py demo`  
-
----
-
-## 2-Minute Demo Flow
-
-### 0:00 – 0:30 | Scene A: Known Source Fast-Path Ingestion
-* **Action:** Launch demo. Standard Cisco ASA firewall events arrive.
-* **Demonstration:**
-  - Route through compiled declarative pack (`cisco_asa_9.16.yaml`).
-  - Output normalized into OCSF Class 4001 (`Network Activity`).
-  - Show throughput exceeding 10,000 EPS and p50 latency under 100 µs.
-* **Talking Point:** *"Known logs pass through our compiled Fast Path without inspection overhead."*
+# AegisGuard-ULPF — Official 2-Minute SIH Demo Video Script
+**Target Duration:** Exactly 120 Seconds (2 Minutes)  
+**Presenter:** Security Architect / Team Lead  
+**Tone:** Calm, authoritative, technical, evidence-first.
 
 ---
 
-### 0:30 – 0:55 | Scene B: Unknown Source Discovery
-* **Action:** Inject an uncataloged appliance log:
-  `2026-10-05T12:00:00Z NEODEFENSE-GW01 evt=PACKET_DROP client_ip=203.0.113.88 s_port=59021 srv_ip=198.51.100.4 d_port=8080 proto=TCP`
-* **Demonstration:**
-  - System captures raw wire evidence and computes SHA-256 hash.
-  - Offline `FormatFingerprinter` identifies format as `KEY_VALUE` (Confidence: 85%).
-  - `TemplateClusterer` abstracts variables: `<TIMESTAMP> NEODEFENSE-GW01 evt=PACKET_DROP client_ip=<IP> s_port=<NUM>...`.
-  - `FieldInferencer` tags `src_endpoint.ip`, `dst_endpoint.ip`, and `src_endpoint.port` deterministically.
-* **Talking Point:** *"Unlike static parsers that drop unknown logs, our Adaptive Source Intelligence mines the structure and infers fields without external AI calls."*
+### [0:00 – 0:20] SCENE 1: THE PROBLEM & SOVEREIGN TELEMETRY CHAOS
+* **Visual:** Split screen showing messy, malformed vendor logs (Cisco ASA, Imperva CEF, Linux SSHD, Palo Alto) pouring into a terminal alongside an alert dashboard.
+* **On-Screen Text:** "SIH 26156: Universal Log Pre-processing Framework (NTRO)"
+* **Narration:**
+  > "In high-stakes national cyber defense, security operations centers ingest billions of logs from dozens of proprietary hardware vendors. Each uses different schemas, timestamps, and formats. Analysts spend 60% of their time writing brittle regexes, while unverified parsing destroys evidentiary chain-of-custody.
+  > This is **AegisGuard-ULPF** — an air-gapped, sovereign telemetry framework that transforms vendor chaos into strictly validated OCSF records with bit-exact byte lineage and mathematical proof-of-custody."
 
 ---
 
-### 0:55 – 1:20 | Scene C: Candidate Pack Proposal & Atomic Hot-Reload
-* **Action:** Generate candidate YAML source pack and trigger operator hot reload.
-* **Demonstration:**
-  - `ProposalGenerator` produces a valid YAML source pack.
-  - Operator approves; `SourcePackRegistry.reload()` updates the in-memory registry atomically.
-  - Zero downtime, zero dropped logs. The next event from this vendor processes directly on the Fast Path.
-* **Talking Point:** *"Zero-downtime evolution: new parsers are onboarded dynamically without touching core pipeline code."*
+### [0:20 – 0:50] SCENE 2: LIVE MULTI-SOURCE INGESTION & FORENSIC PROVENANCE
+* **Visual:** Terminal runs `./start_demo.sh`. Browser switches to React SOC Cyber Console (`http://localhost:5173`). Live logs stream in across Cisco ASA, ArcSight CEF, and Linux SSHD. Presenter clicks on a Cisco ASA event to open the Log Drawer.
+* **UI Actions:**
+  1. Highlight **Raw Wire Payload** with SHA-256 digest `1a90c0aa...`.
+  2. Switch to **OCSF Normalized View** showing Class `4001: Network Activity`.
+  3. Switch to **Forensic Lineage Tab** showing exact character spans `[63:75]` for source IP `198.51.100.4`.
+* **Narration:**
+  > "Here, our engine processes multiple live perimeter streams simultaneously. Look closely at this Cisco ASA firewall connection event:
+  > First, the raw wire payload was preserved in base64 with a SHA-256 digest before any transformation.
+  > Second, it's normalized into OCSF v1.1.0 Class 4001.
+  > Third, our lineage engine maintains exact character span pointers linking every OCSF field directly back to its original bytes on the wire. No hallucination, no offset drift."
 
 ---
 
-### 1:20 – 1:40 | Scene D: Field-Level Forensic Lineage
-* **Action:** Inspect the forensic envelope.
-* **Demonstration:**
-  - Display raw wire SHA-256 hash alongside normalized OCSF fields.
-  - Show byte-precise spans `[start, end]`:
-    - `src_ip`: Byte span `[63:75]` -> `"203.0.113.88"`
-    - `src_port`: Byte span `[83:88]` -> `"59021"`
-* **Talking Point:** *"Every OCSF field points back to its exact byte offset in the sealed raw wire evidence."*
+### [0:50 – 1:20] SCENE 3: DETERMINISTIC ONBOARDING OF UNKNOWN SOURCES
+* **Visual:** Presenter switches to terminal and blasts an unknown proprietary appliance log:  
+  `2026-10-05 GW01 evt=PACKET_DROP client_ip=203.0.113.88 srv_ip=198.51.100.4 proto=TCP`  
+  Console flags it as `UNKNOWN / QUARANTINED`.
+* **CLI Action:**
+  ```bash
+  python3 ulpf.py profile "2026-10-05 GW01 evt=PACKET_DROP client_ip=203.0.113.88 srv_ip=198.51.100.4 proto=TCP"
+  python3 ulpf.py draft --vendor NeoDefense --product Gateway "..."
+  ```
+* **Narration:**
+  > "When an unknown vendor device appears on the network, traditional pipelines fail silently or drop packets.
+  > AegisGuard-ULPF routes the log to quarantine and engages our offline Adaptive Intelligence engine.
+  > In one command — `ulpf profile` — it extracts delimiter entropy, clusters the grammar template, and infers OCSF fields with 95% confidence.
+  > `ulpf draft` generates a candidate declarative Source Pack. The SOC operator reviews and promotes it with zero downtime. Subsequent events immediately hit the fast-path."
 
 ---
 
-### 1:40 – 2:00 | Scene E: Upstream Format Change & Parser Drift Monitor
-* **Action:** Feed mutated vendor log format (`v2`).
-* **Demonstration:**
-  - Field extraction coverage drops below baseline threshold.
-  - `DriftDetectionEngine` fires a `DRIFT_DETECTED` alert with the exact coverage delta.
-  - Event quarantined and routed back to the learning loop.
-* **Talking Point:** *"When vendors update log formats, ULPF detects coverage drift automatically, preventing silent data loss."*
+### [1:20 – 1:45] SCENE 4: RFC 6962 MERKLE INTEGRITY & TAMPER PROOFS
+* **Visual:** Presenter clicks **Verify In Ledger** in the UI, then demonstrates terminal proof verification:
+* **CLI Action:**
+  ```bash
+  python3 ulpf.py prove --index 1
+  ```
+  Mutating 1 byte in the leaf payload causes the verification script to output `[FAIL] TAMPER DETECTED / INVALID`.
+* **Narration:**
+  > "To ensure evidentiary defensibility for judicial inquiry and CERT-In compliance, every batch of logs is anchored into an RFC 6962 cryptographic Merkle tree.
+  > Any analyst can extract a logarithmic inclusion proof. If a malicious insider or disk failure alters even a single character in the raw archive, the Merkle root mathematically invalidates the record instantly."
+
+---
+
+### [1:45 – 2:00] SCENE 5: AIR-GAP SOVEREIGNTY & STATUTORY COMPLIANCE
+* **Visual:** Terminal runs `python3 scripts/verify_airgap.py` showing 4/4 external probes blocked with `EPERM`. Shows CERT-In 6-Hour export dossier download and Verhoeff-redacted Aadhaar tokens.
+* **On-Screen Text:** "AegisGuard-ULPF: 100% Sovereign. Air-Gapped. NTRO SIH 26156 Ready."
+* **Narration:**
+  > "Finally, AegisGuard-ULPF operates under strict air-gap constraints. Outbound sockets are hard-blocked at the kernel interface. Integrated Verhoeff checksums redact Indian Aadhaar numbers without false-positive timestamp corruption, and CERT-In 6-hour incident dossiers export automatically.
+  > AegisGuard-ULPF: Different logs. One security language. Every transformation accounted for."
