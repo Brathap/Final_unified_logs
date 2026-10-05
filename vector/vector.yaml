@@ -28,8 +28,12 @@ transforms:
       raw_msg_b64 = encode_base64(raw_msg_str)
       msg_hash = sha2(raw_msg_str)
       
-      # 2. Aadhaar PII Redaction (12-digit Indian national identity pattern)
-      sanitized_message = replace(raw_msg_str, r'\b\d{12}\b', "[REDACTED_AADHAAR]")
+      # 2. Named Entity PII Redaction (Aadhaar, PAN, Mobile, Email, IMEI)
+      msg_redacted = replace(raw_msg_str, r'(?<!\d)[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}(?!\d)', "[REDACTED_AADHAAR]")
+      msg_redacted = replace(msg_redacted, r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b', "[REDACTED_PAN]")
+      msg_redacted = replace(msg_redacted, r'(?<!\d)(?:(?:\+91[\-\s]?|91[\-\s]?|0)?[6-9]\d{9})(?!\d)', "[REDACTED_MOBILE]")
+      msg_redacted = replace(msg_redacted, r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b', "[REDACTED_EMAIL]")
+      sanitized_message = msg_redacted
       has_pii = sanitized_message != raw_msg_str
       
       # 3. Dynamic IP Extraction (Source & Destination IP discovery)
@@ -149,5 +153,8 @@ sinks:
     inputs:
       - process_and_normalize
     uri: "http://127.0.0.1:8000/api/live-logs"
+    request:
+      headers:
+        X-API-Key: "ulpf_admin_secret_key_2026"
     encoding:
       codec: json

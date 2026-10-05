@@ -8,12 +8,15 @@ services:
     ports:
       - "8000:8000"
       - "5173:5173"
+      - "6514:6514"
       - "5140:5140/udp"
       - "514:514/udp"
       - "5514:5514/udp"
     volumes:
-      - ./backend/threat_intel.csv:/app/backend/threat_intel.csv:ro
-      - ./vector:/app/vector
+      - ./backend/threat_intel.csv:/app/backend/threat_intel.csv:rw
+      - ./backend/threat_intel.csv.manifest.json:/app/backend/threat_intel.csv.manifest.json:rw
+      - ./storage:/app/storage:rw
+      - ./vector:/app/vector:rw
       - vector-data:/tmp/vector
     environment:
       - PYTHONUNBUFFERED=1

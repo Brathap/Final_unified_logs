@@ -100,9 +100,9 @@ docker compose up --build
   - Class `4001`: Network Activity (Cisco ASA, Firewall ACLs, VPN sessions)
   - Class `3002`: Identity & Access Management (SSHD, Windows Security Event 4625)
   - Class `2001`: Security Finding (Imperva WAF, Cloudflare Edge WAF, SQLi detection)
-- **PII Scrubbing**: In-stream regex redaction masking 12-digit Indian Aadhaar numbers with `[REDACTED_AADHAAR]` prior to downstream analytics.
-- **Threat Intel Enrichment**: Real-time cross-referencing against local [`threat_intel.csv`](file:///home/Brathap/ulpf-sih-26156/backend/threat_intel.csv) mapping malicious IPs to threat groups (APT29, LazarusGroup, Sandworm, VoltTyphoon, LockBit).
-- **Forensic Non-Repudiation**: Computes deterministic SHA-256 hash and Base64 wire capture before applying transformations.
+- **Named Entity PII Scrubbing**: Multi-entity redaction engine supporting Verhoeff-validated Aadhaar (avoiding false-positives on timestamps/order IDs), PAN, Indian mobile numbers, emails, and Luhn-validated IMEI numbers.
+- **Threat Intel Enrichment**: Real-time cross-referencing against local [`threat_intel.csv`](file:///home/Brathap/ulpf-sih-26156/backend/threat_intel.csv) mapping malicious IPs to threat groups (APT29, LazarusGroup, Sandworm, VoltTyphoon, LockBit), versioned with offline manifest verification.
+- **Forensic Non-Repudiation**: Computes deterministic SHA-256 integrity hash and Base64 wire capture before applying transformations.
 
 ### 2. Autonomous AI Schema Studio (`frontend/src/components/AiMapper.tsx`)
 - Secure interactive UI for onboarding proprietary devices.
@@ -111,26 +111,63 @@ docker compose up --build
 
 ### 3. Air-Gap Cryptographic Provenance (`frontend/src/components/AirGapProvenance.tsx`)
 - Standard Web Crypto SHA-256 interactive validator for verifying evidentiary chain-of-custody.
-- Ring buffer backpressure tracking and zero-cloud-egress compliance indicator.
+- Ring buffer backpressure tracking and verified zero external egress fail-closed perimeter.
 
 ---
 
 ## 🧪 Testing the Framework
 
-### 1. Run Log Firehose Simulator
-To send a stream of heterogeneous network logs into the pipeline:
+### 1. Grand Jury Evaluation Guide (Evaluator's Playbook)
+For evaluators, technical judges, and red-team auditors:
+👉 **[Read the Full Evaluation Guide (`docs/EVALUATION-GUIDE.md`)](file:///home/Brathap/ulpf-sih-26156/docs/EVALUATION-GUIDE.md)** for 5 step-by-step methods to test and attempt to catch the system out in under 20 minutes.
+
+### 2. Run Complete Automated Test Suite
+All 14 security and architecture requirements are covered by automated unit and integration tests:
 ```bash
-python3 backend/simulate_firehose.py
+pytest -v
 ```
 
-### 2. Validate Vector Remap Config
+Tests include:
+- `tests/test_merkle_tree.py` & `tests/test_merkle_api.py`: RFC 6962 cryptographic Merkle Tree inclusion proofs and verification endpoints.
+- `tests/test_storage_architecture.py`: 10k event ingestion, <50ms query latency, SQLite WAL concurrency, and collision rejection.
+- `tests/test_egress_enforcement.py`: Socket interception proof for TCP, UDP, DNS, confirming fail-closed air-gap.
+- `tests/test_pii_coverage.py`: Verhoeff-validated Aadhaar, PAN format check, email, IMEI Luhn checks, false positive/negative validation.
+- `tests/test_threat_intel_update.py`: SHA-256 checksum-verified offline manifest imports, versioning, audit logging.
+- `tests/test_auth_rbac.py`: API key / Bearer token authentication, operator vs admin RBAC, SQLite audit ledger logging.
+- `tests/test_ip_extraction.py`: Per-source VRL grok/dissect and IPv4/IPv6 extraction with malformed line handling.
+- `tests/test_forensic_bundle.py`: ZIP evidence packaging with unrepudiated SHA-256 integrity manifest.
+- `tests/test_reconstruction.py`: Byte-level reverse-template round-trip verification with exact offset diffs.
+- `tests/test_certin_export.py`: CERT-In 6-Hour incident reporting format and schema drift monitoring.
+- `tests/test_onboarding_consensus.py`: Multi-signal consensus (signatures, delimiter entropy, structural grammar).
+- `tests/test_deep_resilience.py`: Sustained high throughput, client disconnection lifecycle, and memory bounds.
+
+### 3. Real Telemetry Replay (Zero Synthetic Data)
+To replay genuine captured Honeynet SotM 34, Cisco ASA, and Linux UFW logs into the air-gapped pipeline:
 ```bash
-vector vector/vector.yaml
+python3 backend/replay_corpus.py --port 5140 --rate 10
 ```
 
-### 3. Test Ingestion Webhook Manually
+### 4. Test Ingestion Webhook Manually
 ```bash
 curl -X POST http://localhost:8000/api/live-logs \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: ulpf_admin_secret_key_2026" \
   -d '{"traceability":{"raw_sha256":"test_hash","sanitized_raw":"CEF:0|Imperva|WAF|14.0|SQLI|SQL Injection|9|src=198.51.100.23 dst=10.1.1.20"},"normalized_data":{"class_uid":2001,"category_name":"Security Finding","activity_name":"WAF SQLi Block","severity":"Critical","severity_id":5,"src_endpoint":{"ip":"198.51.100.23"},"dst_endpoint":{"ip":"10.1.1.20"},"enrichment":{"is_malicious":true,"threat_actor":"APT29"},"compliance":{"pii_redacted":false}}}'
 ```
+
+---
+
+## 🔒 Technical Transparency & Architectural Notes
+
+| Component | Technical Implementation Status | Operational Details |
+|---|---|---|
+| **Egress Enforcement** | ✅ Fully Functional & Tested | Python socket interceptor monkeypatches TCP `connect()`, UDP `sendto()`/`sendmsg()`, and DNS `gethostbyname()` to block non-loopback traffic at kernel API boundary. Verified with startup self-test. |
+| **Proof of Ledger** | ✅ RFC 6962 Merkle Tree | Domain-separated SHA-256 leaves (`0x00`) and interior nodes (`0x01`). Exposes logarithmic inclusion proof API (`/api/merkle/proof/{id}`) with mathematical verification. |
+| **Storage Architecture** | ✅ Fully Functional & Tested | SQLite in WAL mode with single-writer thread queue, indexed analytical tables, and append-only raw JSONL ledger. Duplicate ID collisions are rejected and logged to audit table. |
+| **WORM Guarantees** | ⚠️ Software-Level Only | Log files are software-enforced append-only (`mode="a"`). True hardware WORM requires physical optical write-once media or hardware-level S3 Object Lock. |
+| **Reconstruction Verification** | ✅ Fully Functional & Tested | `backend/reconstruction_verifier.py` byte-compares candidate reconstruction against raw wire bytes; gates parser deployment on bit-exact parity. |
+| **Authentication & RBAC** | ✅ Fully Functional & Tested | `X-API-Key` and `Authorization: Bearer` middleware across all endpoints, separating `operator` from `admin` roles, backed by immutable audit ledger. |
+| **PII Redaction** | ✅ Fully Functional & Tested | Verhoeff checksum algorithm for 12-digit Indian Aadhaar, Income Tax PAN regex, email, and Luhn IMEI scrubber. Replaced boolean flag with typed tags in `pii_redacted_types`. |
+| **Simulation Transparency** | ✅ Fully Functional | Demo synthetic events are marked with `is_simulated: true` and rendered with a visible `[SIMULATED]` tag. Client-side hash is explicitly documented as non-cryptographic demo hash. |
+
+

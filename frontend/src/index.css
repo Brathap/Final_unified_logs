@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
@@ -8,13 +9,20 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #f1f5f9;
-    color: #0f172a;
+    background-color: #000000;
+    color: #ffffff;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.011em;
+  }
+
+  .dark body, html.dark body {
+    background-color: #000000;
+    color: #ffffff;
   }
 
   code, pre, .font-mono {
     font-family: var(--font-mono);
+    letter-spacing: -0.02em;
   }
 }
 
@@ -26,18 +34,27 @@
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
+html.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 /* Real-Time Live Log Entry & Pulse Animations (Hardware-accelerated, zero layout reflow) */
 @keyframes logFlash {
   0% {
-    background-color: rgba(37, 99, 235, 0.12);
+    background-color: rgba(37, 99, 235, 0.18);
   }
   100% {
     background-color: transparent;
@@ -50,10 +67,10 @@
 
 @keyframes threatFlash {
   0% {
-    background-color: rgba(225, 29, 72, 0.22);
+    background-color: rgba(225, 29, 72, 0.28);
   }
   100% {
-    background-color: rgba(255, 241, 242, 0.7);
+    background-color: rgba(225, 29, 72, 0.12);
   }
 }
 
@@ -63,15 +80,13 @@
 
 @keyframes laptopFlash {
   0% {
-    background-color: rgba(99, 102, 241, 0.22);
+    background-color: rgba(99, 102, 241, 0.25);
   }
   100% {
-    background-color: rgba(238, 242, 255, 0.4);
+    background-color: rgba(99, 102, 241, 0.08);
   }
 }
 
 .animate-laptop-entry {
   animation: laptopFlash 0.4s ease-out forwards;
 }
-
-

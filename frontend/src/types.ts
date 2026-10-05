@@ -48,6 +48,7 @@ export interface OcsfData {
 
 export interface ULPFLogRecord {
   id?: string;
+  is_simulated?: boolean;
   traceability: Traceability;
   normalized_data: OcsfData;
 }
