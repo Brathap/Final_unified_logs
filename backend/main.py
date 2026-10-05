@@ -318,6 +318,101 @@ def get_metrics(user: AuthUser = Security(require_role(["admin", "operator"]))):
 
 # Thread/Asyncio safety locks
 recent_logs_lock = asyncio.Lock()
+
+# Production Modules: Quarantine, Source Pack Lifecycle, and Bounded Ingestion
+from quarantine_engine import QuarantineManager
+from source_packs.lifecycle import SourcePackLifecycleManager
+from ingestion_gateway import IngestionQueueManager
+
+quarantine_manager = QuarantineManager(STORAGE_DIR)
+lifecycle_manager = SourcePackLifecycleManager(os.path.join(PROJECT_ROOT, "sources"))
+ingestion_queue = IngestionQueueManager(maxsize=50000)
+
+@app.get("/health")
+@app.get("/healthz")
+def health_check():
+    """Standard Kubernetes / SRE liveness and health probe."""
+    return {
+        "status": "healthy",
+        "service": "ULPF",
+        "version": "2.0.0",
+        "air_gap_enforced": True,
+        "timestamp": time.time()
+    }
+
+@app.get("/ready")
+@app.get("/readyz")
+def readiness_check():
+    """Readiness probe checking storage and queue health."""
+    return {
+        "status": "ready",
+        "queue_depth": ingestion_queue.queue_depth,
+        "backpressure_active": ingestion_queue.is_backpressure_active,
+        "storage_online": True
+    }
+
+@app.get("/api/quarantine")
+def list_quarantined_events(
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Lists quarantined events with failure details and raw payload."""
+    return {
+        "events": quarantine_manager.list_quarantined(status=status, category=category, limit=limit, offset=offset),
+        "stats": quarantine_manager.get_stats()
+    }
+
+class QuarantineReplayRequest(BaseModel):
+    quarantine_id: str
+
+@app.post("/api/quarantine/replay")
+def replay_quarantined_event(
+    req: QuarantineReplayRequest,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Replays a quarantined event through the active parser registry."""
+    ev = quarantine_manager.get_event(req.quarantine_id)
+    if not ev:
+        raise HTTPException(status_code=404, detail="Quarantined event not found.")
+    raw_text = ev["raw_payload"]
+    routed = source_pack_registry.route_and_parse(raw_text)
+    if routed:
+        quarantine_manager.mark_status(req.quarantine_id, "REPLAYED")
+        pack, ext, ocsf = routed
+        return {"status": "success", "message": f"Successfully replayed via {pack.pack_id}", "ocsf": ocsf}
+    else:
+        return {"status": "failed", "message": "Log still fails active parsers. Unknown source onboarding required."}
+
+@app.get("/api/source-packs/history")
+def get_source_pack_history(
+    vendor: str,
+    product: str,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Returns chronological version history and SHA-256 hashes for a source pack."""
+    return {"history": lifecycle_manager.list_version_history(vendor, product)}
+
+class PackRollbackRequest(BaseModel):
+    vendor: str
+    product: str
+    target_version: Optional[str] = None
+
+@app.post("/api/source-packs/rollback")
+def rollback_source_pack(
+    req: PackRollbackRequest,
+    user: AuthUser = Security(require_role(["admin"]))
+):
+    """Admin-only safe rollback of an active source pack to its previous version."""
+    success, msg = lifecycle_manager.rollback_pack(req.vendor, req.product, req.target_version, actor=user.username)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    # Hot-reload in-memory registry
+    source_pack_registry.reload()
+    return {"status": "success", "message": msg}
+
 subscribers_lock = asyncio.Lock()
 
 @app.post("/api/live-logs")
