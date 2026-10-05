@@ -16,7 +16,6 @@ export interface ThreatEnrichment {
   threat_actor: string;
   threat_level: string;
   confidence?: number;
-  mitre_id?: string;
 }
 
 export interface Compliance {

@@ -66,19 +66,6 @@ const PRESETS = [
       { sourceKey: 'status', ocsfPath: 'activity_name' },
     ]
   },
-  {
-    id: 'unknown_raw',
-    name: 'Unknown Custom Log',
-    badge: 'Auto-Detect',
-    sourceType: 'unknown_source',
-    wireFormat: 'SYSLOG',
-    sample: `10.240.11.89 - - [25/Sep/2026:14:02:19 +0000] "POST /api/v2/secure-auth HTTP/1.1" 403 892 client_ip=198.51.100.88 actor=priya_admin blocked_by=custom_firewall_rule`,
-    mappings: [
-      { sourceKey: 'client_ip', ocsfPath: 'src_endpoint.ip' },
-      { sourceKey: 'actor', ocsfPath: 'actor.user.name' },
-      { sourceKey: 'blocked_by', ocsfPath: 'activity_name' },
-    ]
-  },
 ];
 
 export const AiMapper: React.FC = () => {
@@ -120,43 +107,6 @@ export const AiMapper: React.FC = () => {
     const updated = [...mappings];
     updated[index][key] = value;
     setMappings(updated);
-  };
-
-  const [isInferring, setIsInferring] = useState(false);
-  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
-
-  const handleAiInferSchema = async () => {
-    if (!rawSample.trim()) return;
-    setIsInferring(true);
-    setDeployResult({ status: 'idle', message: '' });
-
-    try {
-      const res = await axios.post('http://localhost:8000/api/ai-infer-schema', {
-        raw_sample: rawSample
-      });
-      const data = res.data;
-      if (data && data.status === 'success') {
-        if (data.detected_source_type) setSourceType(data.detected_source_type);
-        if (data.detected_wire_format) setWireFormat(data.detected_wire_format);
-        if (data.confidence_score) setAiConfidence(data.confidence_score);
-
-        if (Array.isArray(data.inferred_mappings) && data.inferred_mappings.length > 0) {
-          setMappings(data.inferred_mappings.map((m: any) => ({
-            sourceKey: m.sourceKey,
-            ocsfPath: m.ocsfPath
-          })));
-        }
-
-        setDeployResult({
-          status: 'success',
-          message: `AI Inference Complete (${data.confidence_score}% Confidence): Autonomously mapped ${data.inferred_mappings.length} schema fields for ${data.detected_source_type} (${data.detected_wire_format}).`
-        });
-      }
-    } catch (err: any) {
-      console.warn("AI Inference error", err);
-    } finally {
-      setIsInferring(false);
-    }
   };
 
   const handleDeployParser = async () => {
@@ -304,32 +254,16 @@ export const AiMapper: React.FC = () => {
 
       {/* Raw Sample Payload */}
       <div className="mb-5">
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <span>Sample Wire Log Payload</span>
-            {aiConfidence && (
-              <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
-                {aiConfidence}% AI Confidence
-              </span>
-            )}
-          </label>
-          <button
-            type="button"
-            onClick={handleAiInferSchema}
-            disabled={isInferring}
-            className="flex items-center space-x-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-all disabled:opacity-50"
-            title="Use AI Pattern Recognition to automatically detect source, format, and map fields"
-          >
-            <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isInferring ? 'animate-spin' : ''}`} />
-            <span>{isInferring ? 'AI Analyzing...' : 'AI Auto-Map Fields'}</span>
-          </button>
-        </div>
+        <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+          <span>Sample Wire Log Payload</span>
+          <span className="text-[10px] text-slate-500 font-mono font-normal">Auto-tokenized</span>
+        </label>
         <textarea
           rows={2}
           value={rawSample}
           onChange={(e) => setRawSample(e.target.value)}
           className="w-full bg-white border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-lg p-3 text-xs font-mono text-slate-800 outline-none"
-          placeholder="Paste any custom/unknown raw log string here..."
+          placeholder="Paste raw log string..."
         />
       </div>
 
@@ -379,46 +313,6 @@ export const AiMapper: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Live In-Flight Normalized Preview */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-300">
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span className="font-bold uppercase tracking-wider text-slate-200">
-              Live Projected OCSF v1.1.0 JSON Preview
-            </span>
-            <span className="px-2 py-0.2 rounded text-[10px] bg-blue-900/60 text-blue-300 font-bold border border-blue-700">
-              Zero-Downtime Safe
-            </span>
-          </div>
-          <span className="text-[11px] font-mono text-slate-400">
-            Auto-Updates with Mappings
-          </span>
-        </div>
-        <pre className="text-emerald-400 font-mono text-xs overflow-x-auto max-h-44 p-2 bg-slate-950/80 rounded border border-slate-800/80 leading-relaxed">
-          <code>
-            {JSON.stringify({
-              metadata: {
-                version: "1.1.0",
-                source_type: sourceType,
-                wire_format: wireFormat,
-                parser: parserName
-              },
-              class_uid: sourceType.includes('auth') ? 3002 : (sourceType.includes('waf') ? 2001 : 4001),
-              category_name: sourceType.includes('auth') ? "Identity & Access Management" : "Network Activity",
-              activity_name: "Normalized Event Flow",
-              projections: Object.fromEntries(
-                mappings.filter(m => m.sourceKey.trim()).map(m => [m.ocsfPath, `{{.${m.sourceKey}}}`])
-              ),
-              compliance: {
-                pii_redacted: true,
-                non_repudiation: "SHA-256 Verified"
-              }
-            }, null, 2)}
-          </code>
-        </pre>
       </div>
 
       {/* Deployment Result */}

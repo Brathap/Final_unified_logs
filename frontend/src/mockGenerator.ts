@@ -1,12 +1,12 @@
 import type { ULPFLogRecord } from './types';
 
 const THREAT_ACTORS = [
-  { ip: '198.51.100.23', actor: 'APT29 (Cozy Bear)', severity: 'Critical', geo: 'RU', mitreId: 'T1133' },
-  { ip: '203.0.113.84', actor: 'Lazarus Group', severity: 'Critical', geo: 'KP', mitreId: 'T1110.001' },
-  { ip: '192.0.2.145', actor: 'Sandworm (Unit 74455)', severity: 'High', geo: 'RU', mitreId: 'T1498' },
-  { ip: '103.21.244.12', actor: 'Volt Typhoon', severity: 'Medium', geo: 'CN', mitreId: 'T1078' },
-  { ip: '198.51.100.99', actor: 'LockBit 3.0', severity: 'High', geo: 'Tor/Darknet', mitreId: 'T1486' },
-  { ip: '203.0.113.111', actor: 'Cobalt Strike C2', severity: 'Critical', geo: 'US-Proxy', mitreId: 'T1071.001' },
+  { ip: '198.51.100.23', actor: 'APT29 (Cozy Bear)', severity: 'Critical', geo: 'RU' },
+  { ip: '203.0.113.84', actor: 'Lazarus Group', severity: 'Critical', geo: 'KP' },
+  { ip: '192.0.2.145', actor: 'Sandworm (Unit 74455)', severity: 'High', geo: 'RU' },
+  { ip: '103.21.244.12', actor: 'Volt Typhoon', severity: 'Medium', geo: 'CN' },
+  { ip: '198.51.100.99', actor: 'LockBit 3.0', severity: 'High', geo: 'Tor/Darknet' },
+  { ip: '203.0.113.111', actor: 'Cobalt Strike C2', severity: 'Critical', geo: 'US-Proxy' },
 ];
 
 const INTERNAL_IPS = [
@@ -43,13 +43,14 @@ function pseudoHash(str: string): string {
   return hex.repeat(8).substring(0, 64);
 }
 
-export function generateSyntheticLog(forceLaptop?: boolean): ULPFLogRecord {
-  // Demo Stream produces enterprise logs, or laptop logs if forceLaptop is true
-  const isLaptopHost = Boolean(forceLaptop);
-  const isMalicious = !isLaptopHost && Math.random() < 0.28;
-  const hasAadhaar = !isLaptopHost && Math.random() < 0.32;
-  const isCisco = !isLaptopHost && Math.random() < 0.5;
-  const isImperva = !isLaptopHost && !isCisco && Math.random() < 0.6;
+export function generateSyntheticLog(): ULPFLogRecord {
+  // Demo Stream strictly produces enterprise network & security appliance logs (Cisco, Imperva, SSHD)
+  // Real laptop systemd host logs are streamed exclusively when Laptop Logs toggle is ON
+  const isLaptopHost = false;
+  const isMalicious = Math.random() < 0.28;
+  const hasAadhaar = Math.random() < 0.32;
+  const isCisco = Math.random() < 0.5;
+  const isImperva = !isCisco && Math.random() < 0.6;
 
   const now = new Date();
   const timestamp = now.toISOString();
@@ -72,15 +73,12 @@ export function generateSyntheticLog(forceLaptop?: boolean): ULPFLogRecord {
   dstIp = target.ip;
   dstGeo = target.geo;
 
-  let mitreId: string | undefined = undefined;
-
   if (isMalicious) {
     const threat = THREAT_ACTORS[Math.floor(Math.random() * THREAT_ACTORS.length)];
     srcIp = threat.ip;
     srcGeo = threat.geo;
     threatActor = threat.actor;
     threatLevel = threat.severity;
-    mitreId = threat.mitreId;
     severity = threat.severity;
     severityId = threat.severity === 'Critical' ? 5 : 4;
   } else {
@@ -202,7 +200,6 @@ export function generateSyntheticLog(forceLaptop?: boolean): ULPFLogRecord {
         threat_actor: threatActor,
         threat_level: threatLevel,
         confidence: isMalicious ? 98.4 : 0,
-        mitre_id: mitreId,
       },
       compliance: {
         pii_redacted: hasAadhaar,

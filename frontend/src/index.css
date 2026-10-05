@@ -34,44 +34,34 @@
   background: #94a3b8;
 }
 
-/* Real-Time Live Log Entry & Pulse Animations (Hardware-accelerated, zero layout reflow) */
+/* Real-Time Live Log Entry & Pulse Animations */
 @keyframes logFlash {
   0% {
-    background-color: rgba(37, 99, 235, 0.12);
+    background-color: rgba(37, 99, 235, 0.18);
+    transform: translateY(-2px);
   }
   100% {
     background-color: transparent;
+    transform: translateY(0);
   }
 }
 
 .animate-log-entry {
-  animation: logFlash 0.4s ease-out forwards;
+  animation: logFlash 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes threatFlash {
   0% {
-    background-color: rgba(225, 29, 72, 0.22);
+    background-color: rgba(225, 29, 72, 0.25);
+    transform: translateY(-2px);
   }
   100% {
     background-color: rgba(255, 241, 242, 0.7);
+    transform: translateY(0);
   }
 }
 
 .animate-threat-entry {
-  animation: threatFlash 0.5s ease-out forwards;
+  animation: threatFlash 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
-@keyframes laptopFlash {
-  0% {
-    background-color: rgba(99, 102, 241, 0.22);
-  }
-  100% {
-    background-color: rgba(238, 242, 255, 0.4);
-  }
-}
-
-.animate-laptop-entry {
-  animation: laptopFlash 0.4s ease-out forwards;
-}
-
 
