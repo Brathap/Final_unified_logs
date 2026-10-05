@@ -424,7 +424,17 @@ async def receive_live_logs(
     try:
         body = await request.json()
         records = body if isinstance(body, list) else [body]
+
+        # Security Hardening: Enforce maximum batch ceiling to prevent DoS memory exhaustion
+        MAX_BATCH_RECORDS = 5000
+        if len(records) > MAX_BATCH_RECORDS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Payload too large. Batch of {len(records)} exceeds maximum ceiling of {MAX_BATCH_RECORDS} records."
+            )
+
         sha256_pattern = re.compile(r"^[0-9a-fA-F]{64}$")
+
 
         for record in records:
             trace = record.get("traceability") or {}
