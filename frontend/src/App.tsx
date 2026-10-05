@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { 
   Shield, 
   Terminal, 
@@ -10,24 +11,32 @@ import {
   Clock,
   Menu,
   X,
-  Laptop
+  Laptop,
+  Binary
 } from 'lucide-react';
 import { LiveStream } from './components/LiveStream';
 import { TelemetryMetrics } from './components/TelemetryMetrics';
-import { AiMapper } from './components/AiMapper';
-import { AirGapProvenance } from './components/AirGapProvenance';
 import { LogDrawer } from './components/LogDrawer';
 import { ULPFLogo } from './components/ULPFLogo';
 import { generateSyntheticLog } from './mockGenerator';
 import type { ULPFLogRecord } from './types';
 
+// Lazy-load secondary tabs to make initial page load instantaneous and feather-light
+const AiMapper = React.lazy(() => import('./components/AiMapper').then(m => ({ default: m.AiMapper })));
+const AirGapProvenance = React.lazy(() => import('./components/AirGapProvenance').then(m => ({ default: m.AirGapProvenance })));
+const BinarySandbox = React.lazy(() => import('./components/BinarySandbox').then(m => ({ default: m.BinarySandbox })));
+
 export const App: React.FC = () => {
   const [logs, setLogs] = useState<ULPFLogRecord[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<'soc' | 'mapper' | 'provenance'>('soc');
+  const [activeTab, setActiveTab] = useState<'soc' | 'mapper' | 'provenance' | 'binary'>('soc');
   const [selectedLog, setSelectedLog] = useState<ULPFLogRecord | null>(null);
+  const [selectedOccurrences, setSelectedOccurrences] = useState<ULPFLogRecord[]>([]);
   const [hostStreaming, setHostStreaming] = useState(true);
   const [hostInfo, setHostInfo] = useState<{ hostname: string; ip: string } | null>(null);
+  
+  // Filter Mode state shared between Header controls and LiveStream table
+  const [filterMode, setFilterMode] = useState<'all' | 'laptop' | 'threats' | 'pii' | 'blocks'>('all');
   
   // Instant Demo Mode Toggle (enabled by default for immediate, lively presentation)
   const [instantDemoMode, setInstantDemoMode] = useState(true);
@@ -35,11 +44,16 @@ export const App: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logCountRef = useRef(0);
 
-  // Initialize with initial batch of high-fidelity logs across all categories
+  // Initialize with initial batch of high-fidelity logs across all categories (including laptop logs)
   useEffect(() => {
     const seed: ULPFLogRecord[] = [];
-    for (let i = 0; i < 40; i++) {
-      seed.push(generateSyntheticLog());
+    // Seed 10 laptop host logs first
+    for (let i = 0; i < 10; i++) {
+      seed.push(generateSyntheticLog(true));
+    }
+    // Seed network & security logs
+    for (let i = 0; i < 30; i++) {
+      seed.push(generateSyntheticLog(false));
     }
     setLogs(seed);
 
@@ -58,6 +72,11 @@ export const App: React.FC = () => {
   const toggleHostLogs = async () => {
     const nextState = !hostStreaming;
     setHostStreaming(nextState); // Immediate optimistic switch
+    if (nextState) {
+      setFilterMode('laptop');
+    } else {
+      setFilterMode('all');
+    }
     try {
       const res = await fetch('http://localhost:8000/api/host-stream/toggle', { method: 'POST' });
       const data = await res.json();
@@ -69,22 +88,41 @@ export const App: React.FC = () => {
     }
   };
 
+  const toggleDemoMode = () => {
+    const nextDemo = !instantDemoMode;
+    setInstantDemoMode(nextDemo);
+    if (nextDemo) {
+      // Switching Demo mode ON immediately opens table to show all events
+      setFilterMode('all');
+    }
+  };
+
   // 1. Instant Demo Mode Generator (Smooth, non-blocking 800ms cadence)
   useEffect(() => {
     if (!instantDemoMode) return;
 
     const demoInterval = setInterval(() => {
-      const newLog = generateSyntheticLog();
-      setLogs(prev => [newLog, ...prev.slice(0, 59)]);
+      const newLog = generateSyntheticLog(false);
+      setLogs(prev => [newLog, ...prev.slice(0, 199)]);
       logCountRef.current += 1;
     }, 800);
 
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
 
-  // 2. Real SSE Stream from FastAPI Backend (Throttled for browser responsiveness)
+  // 2. Real SSE Stream from FastAPI Backend (Batched for smooth 60fps UI performance)
   useEffect(() => {
     let eventSource: EventSource | null = null;
+    let pendingBatch: ULPFLogRecord[] = [];
+    let flushTimer: any = null;
+
+    const flushLogs = () => {
+      if (pendingBatch.length > 0) {
+        const batchToApply = [...pendingBatch];
+        pendingBatch = [];
+        setLogs(prev => [...batchToApply, ...prev].slice(0, 150));
+      }
+    };
 
     const connectSSE = () => {
       eventSource = new EventSource('http://localhost:8000/api/stream');
@@ -97,8 +135,15 @@ export const App: React.FC = () => {
         try {
           const record: ULPFLogRecord = JSON.parse(event.data);
           record.id = record.id || `live-${Date.now()}-${Math.random()}`;
-          setLogs(prev => [record, ...prev.slice(0, 49)]);
+          pendingBatch.unshift(record);
           logCountRef.current += 1;
+
+          if (!flushTimer) {
+            flushTimer = setTimeout(() => {
+              flushTimer = null;
+              flushLogs();
+            }, 80); // Ultra-responsive 80ms batch interval avoids freezing DOM
+          }
         } catch (e) {
           console.error("Error parsing live SSE event", e);
         }
@@ -114,6 +159,7 @@ export const App: React.FC = () => {
     connectSSE();
 
     return () => {
+      if (flushTimer) clearTimeout(flushTimer);
       if (eventSource) eventSource.close();
     };
   }, []);
@@ -196,7 +242,7 @@ export const App: React.FC = () => {
               {/* Demo Mode Switch */}
               <button
                 type="button"
-                onClick={() => setInstantDemoMode(!instantDemoMode)}
+                onClick={toggleDemoMode}
                 className="flex items-center space-x-2 px-2.5 py-1 rounded-md text-xs cursor-pointer hover:bg-white transition-colors"
                 title="Toggle synthetic log generator"
               >
@@ -258,6 +304,19 @@ export const App: React.FC = () => {
                 <Fingerprint className="w-3.5 h-3.5 text-blue-600" />
                 <span>Lossless & Provenance</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('binary')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'binary'
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Binary className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Binary 0's & 1's Sandbox</span>
+              </button>
             </nav>
 
             {/* Connection Status Indicator */}
@@ -310,6 +369,15 @@ export const App: React.FC = () => {
               <Fingerprint className="w-4 h-4" />
               <span>Air-Gap Provenance</span>
             </button>
+            <button
+              onClick={() => { setActiveTab('binary'); setMobileMenuOpen(false); }}
+              className={`p-2.5 rounded-lg text-xs font-bold text-left flex items-center space-x-2 ${
+                activeTab === 'binary' ? 'bg-blue-600 text-white' : 'text-slate-700 bg-slate-50'
+              }`}
+            >
+              <Binary className="w-4 h-4" />
+              <span>Binary 0's & 1's Sandbox</span>
+            </button>
           </div>
         )}
       </header>
@@ -329,28 +397,58 @@ export const App: React.FC = () => {
             <LiveStream 
               logs={logs} 
               isStreaming={isStreaming || instantDemoMode} 
-              onSelectLog={(log) => setSelectedLog(log)}
+              onSelectLog={(log, occurrences) => {
+                setSelectedLog(log);
+                setSelectedOccurrences(occurrences || [log]);
+              }}
               selectedLogId={selectedLog?.id || selectedLog?.traceability.raw_sha256}
               hostStreaming={hostStreaming}
+              onToggleHostLogs={toggleHostLogs}
+              filterMode={filterMode}
+              onFilterModeChange={setFilterMode}
             />
           </div>
         )}
 
         {activeTab === 'mapper' && (
           <div className="flex-1">
-            <AiMapper />
+            <React.Suspense fallback={<div className="p-8 text-center text-xs font-mono text-slate-500">Loading AI Schema Studio...</div>}>
+              <AiMapper />
+            </React.Suspense>
           </div>
         )}
 
         {activeTab === 'provenance' && (
           <div className="flex-1">
-            <AirGapProvenance logs={logs} />
+            <React.Suspense fallback={<div className="p-8 text-center text-xs font-mono text-slate-500">Loading Air-Gap Provenance...</div>}>
+              <AirGapProvenance logs={logs} />
+            </React.Suspense>
+          </div>
+        )}
+
+        {activeTab === 'binary' && (
+          <div className="flex-1">
+            <React.Suspense fallback={<div className="p-8 text-center text-xs font-mono text-slate-500">Loading Bit Compiler Sandbox...</div>}>
+              <BinarySandbox initialLog={selectedLog || logs[0]} />
+            </React.Suspense>
           </div>
         )}
       </main>
 
-      {/* Forensic Log Drawer Modal */}
-      <LogDrawer log={selectedLog} onClose={() => setSelectedLog(null)} />
+      {/* Forensic Log Drawer Modal with smooth AnimatePresence exit transition */}
+      <AnimatePresence>
+        {selectedLog && (
+          <LogDrawer 
+            key={selectedLog.id || selectedLog.traceability.raw_sha256} 
+            log={selectedLog} 
+            occurrences={selectedOccurrences}
+            onClose={() => {
+              setSelectedLog(null);
+              setSelectedOccurrences([]);
+            }} 
+          />
+        )}
+      </AnimatePresence>
 
       {/* Professional Solid Footer */}
       <footer className="border-t border-slate-200 bg-white px-6 py-3.5 text-xs text-slate-600 flex flex-wrap items-center justify-between font-mono gap-2 shadow-xs">
