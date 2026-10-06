@@ -663,28 +663,36 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   </td>
 
                   {/* Source Endpoint */}
-                  <td className="py-2.5 px-3.5 whitespace-nowrap">
-                    <div className="flex items-center space-x-1.5">
-                      <span className={`font-mono text-xs font-semibold ${
+                  <td className="py-2.5 px-3.5 whitespace-nowrap overflow-hidden">
+                    <div className="flex items-center space-x-1.5 max-w-full">
+                      <span className={`font-mono text-xs font-semibold shrink-0 ${
                         isMalicious ? 'text-rose-600 dark:text-rose-400 font-bold' : norm?.metadata?.source_type === 'laptop_host' ? 'text-cyan-700 dark:text-cyan-400 font-bold' : 'text-slate-800 dark:text-slate-100'
                       }`}>
                         {norm?.src_endpoint?.ip || '0.0.0.0'}
                       </span>
                       {norm?.src_endpoint?.geo && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1">
-                          {norm?.metadata?.source_type === 'laptop_host' && <Laptop className="w-2.5 h-2.5 text-cyan-600 dark:text-cyan-400" />}
-                          {norm.src_endpoint.geo}
+                        <span 
+                          title={norm.src_endpoint.geo}
+                          className="text-[10px] px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1 max-w-[130px] truncate"
+                        >
+                          {norm?.metadata?.source_type === 'laptop_host' && <Laptop className="w-2.5 h-2.5 text-cyan-600 dark:text-cyan-400 shrink-0" />}
+                          <span className="truncate">{norm.src_endpoint.geo}</span>
                         </span>
                       )}
                     </div>
                   </td>
 
                   {/* Target Destination */}
-                  <td className="py-2.5 px-3.5 whitespace-nowrap">
-                    <div className="text-slate-700 dark:text-slate-300 text-xs flex items-center space-x-1 font-mono font-medium">
-                      <span>{norm?.dst_endpoint?.ip || '10.0.0.1'}</span>
+                  <td className="py-2.5 px-3.5 whitespace-nowrap overflow-hidden">
+                    <div className="text-slate-700 dark:text-slate-300 text-xs flex items-center space-x-1 font-mono font-medium max-w-full">
+                      <span className="shrink-0">{norm?.dst_endpoint?.ip || '10.0.0.1'}</span>
                       {norm?.dst_endpoint?.geo && (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">[{norm.dst_endpoint.geo}]</span>
+                        <span 
+                          title={norm.dst_endpoint.geo}
+                          className="text-[10px] text-slate-400 dark:text-slate-500 max-w-[120px] truncate"
+                        >
+                          [{norm.dst_endpoint.geo}]
+                        </span>
                       )}
                     </div>
                   </td>
