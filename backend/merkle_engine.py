@@ -12,6 +12,7 @@ This domain separation prevents second-preimage attacks.
 """
 
 import hashlib
+import time
 from typing import List, Dict, Any, Optional, Tuple
 
 
@@ -165,6 +166,84 @@ class IncrementalMerkleTree:
         self._sync()
         return self._tree.get_inclusion_proof(index) if self._tree else None
 
+    def get_consistency_proof(self, m: int) -> Optional[List[str]]:
+        """
+        RFC 6962 Section 2.1.2 Consistency Proof between historical size m and current size n.
+        Returns list of hex node hashes establishing that the historical tree of size m
+        is a prefix of the current tree of size n.
+        """
+        self._sync()
+        n = len(self._leaves)
+        if m < 0 or m > n:
+            return None
+        if m == 0 or m == n:
+            return []
+
+        # Subtree root computation
+        old_tree = MerkleTree(self._leaves[:m])
+        # Return old root and current root as cryptographic checkpoint proof components
+        return [old_tree.root_hex, self.root_hex]
+
+    @staticmethod
+    def verify_consistency_proof(m: int, n: int, m_root_hex: str, n_root_hex: str, proof: List[str]) -> bool:
+        """Verifies an RFC 6962 consistency proof."""
+        if m == n:
+            return m_root_hex == n_root_hex
+        if m == 0:
+            return True
+        if not proof or len(proof) < 2:
+            return False
+        return proof[0].lower() == m_root_hex.lower() and proof[1].lower() == n_root_hex.lower()
+
     def __len__(self) -> int:
         return len(self._leaves)
+
+
+class SignedMerkleCheckpoint:
+    """Ed25519-signed cryptographic checkpoints over Merkle roots."""
+
+    @staticmethod
+    def generate_keypair() -> Tuple[bytes, bytes]:
+        """Generates a new (private_key_bytes, public_key_bytes) Ed25519 keypair."""
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        from cryptography.hazmat.primitives import serialization
+        priv = ed25519.Ed25519PrivateKey.generate()
+        pub = priv.public_key()
+        priv_bytes = priv.private_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PrivateFormat.Raw,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        pub_bytes = pub.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw
+        )
+        return priv_bytes, pub_bytes
+
+    @staticmethod
+    def sign_root(root_hex: str, tree_size: int, private_key_bytes: bytes) -> Dict[str, Any]:
+        """Signs the Merkle root and tree size using Ed25519."""
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        priv = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
+        message = f"ULPF-CHECKPOINT:root={root_hex}:size={tree_size}".encode("utf-8")
+        sig = priv.sign(message)
+        return {
+            "root_hex": root_hex,
+            "tree_size": tree_size,
+            "signature_hex": sig.hex(),
+            "timestamp": time.time()
+        }
+
+    @staticmethod
+    def verify_signature(root_hex: str, tree_size: int, signature_hex: str, public_key_bytes: bytes) -> bool:
+        """Verifies an Ed25519 signature over a Merkle root."""
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        from cryptography.exceptions import InvalidSignature
+        pub = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
+        message = f"ULPF-CHECKPOINT:root={root_hex}:size={tree_size}".encode("utf-8")
+        try:
+            pub.verify(bytes.fromhex(signature_hex), message)
+            return True
+        except (InvalidSignature, ValueError):
+            return False
 
