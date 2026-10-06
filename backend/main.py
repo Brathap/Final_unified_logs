@@ -78,6 +78,7 @@ MAX_RECENT = 100
 
 # Laptop/Host Live Log Streaming State
 HOST_LOGS_ACTIVE = True
+ENTERPRISE_STREAM_ACTIVE = True
 host_stream_task: Optional[asyncio.Task] = None
 LOCAL_HOSTNAME = socket.gethostname()
 LOCAL_OS = platform.platform()
@@ -1373,7 +1374,7 @@ async def startup_event_handler():
         while True:
             try:
                 await asyncio.sleep(1.8)
-                if subscribers:
+                if subscribers and ENTERPRISE_STREAM_ACTIVE:
                     import random
                     log_text = random.choice(enterprise_samples)
                     now_str = datetime.datetime.now().strftime("%b %d %H:%M:%S")
@@ -1474,6 +1475,20 @@ async def toggle_host_stream(
         "hostname": LOCAL_HOSTNAME,
         "active": HOST_LOGS_ACTIVE,
         "message": f"Laptop log streaming {'resumed' if HOST_LOGS_ACTIVE else 'paused'}",
+    }
+
+
+@app.post("/api/enterprise-stream/toggle")
+async def toggle_enterprise_stream(
+    request: Request,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Enable or disable streaming enterprise background wire logs (Admin / Operator)."""
+    global ENTERPRISE_STREAM_ACTIVE
+    ENTERPRISE_STREAM_ACTIVE = not ENTERPRISE_STREAM_ACTIVE
+    return {
+        "active": ENTERPRISE_STREAM_ACTIVE,
+        "message": f"Enterprise wire stream {'resumed' if ENTERPRISE_STREAM_ACTIVE else 'paused'}",
     }
 
 

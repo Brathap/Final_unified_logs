@@ -122,6 +122,8 @@ export const App: React.FC = () => {
       // Switching Demo mode ON immediately opens table to show all events
       setFilterMode('all');
     }
+    // Also sync with backend enterprise wire stream
+    secureFetch('/api/enterprise-stream/toggle', { method: 'POST' }).catch(() => {});
   };
 
   // 1. Instant Demo Mode Generator (Lightweight, non-blocking 1400ms cadence, throttled when tab hidden)
