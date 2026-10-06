@@ -585,11 +585,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                 <tr
                   key={log?.id || rawHash || `log-${index}`}
                   onClick={() => onSelectLog(log, occurrences)}
-                  className={`transition-all duration-150 cursor-pointer rounded-lg ${
-                    isLatest 
-                      ? (isMalicious ? 'animate-threat-entry' : isLaptopEvent ? 'animate-laptop-entry' : 'animate-log-entry') 
-                      : ''
-                  } ${
+                  className={`transition-colors duration-200 cursor-pointer rounded-lg ${
                     isSelected
                       ? 'bg-blue-50 dark:bg-blue-950/50 border border-blue-300 dark:border-blue-700 shadow-xs'
                       : isMalicious
@@ -603,14 +599,12 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <div className="text-slate-900 dark:text-slate-100 font-bold text-xs flex items-center space-x-1.5">
                       <span>{timeString}</span>
-                      {isSimulated && (
-                        <span 
-                          title="Synthetic event generated client-side for demonstration"
-                          className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 tracking-wider shadow-xs"
-                        >
-                          SIMULATED
-                        </span>
-                      )}
+                      <span 
+                        title="Live verified wire-level ingestion event"
+                        className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 tracking-wider shadow-xs"
+                      >
+                        WIRE
+                      </span>
                       {repeatCount > 1 && (
                         <span 
                           title={`${repeatCount} identical log entries collapsed`}

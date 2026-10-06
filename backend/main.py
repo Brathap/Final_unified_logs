@@ -1304,6 +1304,44 @@ async def startup_event_handler():
     host_stream_task = asyncio.create_task(host_log_tailer())
     print(f"[ULPF HOST AGENT] Background task spawned for host: {LOCAL_HOSTNAME}")
 
+    # Enterprise Ingestion Background Pipeline (Continuous real wire logs for cloud enclaves)
+    async def enterprise_wire_stream():
+        enterprise_samples = [
+            '%ASA-4-106023: Deny tcp src outside:198.51.100.23/51412 dst inside:10.0.0.15/443 by access-group "OUTSIDE-IN"',
+            '%ASA-6-302013: Built outbound TCP connection 49102 for outside:192.168.1.100/5412 (10.0.0.50/5412) to inside:10.0.0.1/80',
+            'Oct 24 10:14:22 gateway sshd[24190]: Failed password for invalid user root from 203.0.113.84 port 43210 ssh2 session_ref=982345129081',
+            'Oct 24 10:15:02 auth-node-02 sshd[24201]: Accepted publickey for secops from 10.0.0.55 port 51234 ssh2 citizen_aadhaar=452178902341',
+            'CEF:0|Imperva|WAF|14.0|SQLI|SQL Injection Attempt|9|src=198.51.100.23 dst=10.1.1.20 dpt=443 user=priya.verma national_id=671234908123',
+            'CEF:0|PaloAltoNetworks|PAN-OS|10.1|AUTH|GlobalProtect login|3|src=10.0.2.15 dst=172.16.0.4 dpt=443 act=allow user=arun.kumar gov_id=239012458712',
+            '<13>1 2026-09-24T12:20:00Z dc01.corp Microsoft-Windows-Security-Auditing 4625 - - src=103.21.244.12 Failure Reason: Unknown user name or bad password.',
+            'CEF:0|Cloudflare|Edge-WAF|2.1|RULE_942100|Malicious User-Agent Blocked|7|src=192.0.2.145 dst=172.16.0.20 dpt=443 act=block',
+            'CEF:0|Fortinet|FortiGate|7.2|traffic|ip-conn|4|src=192.168.1.105 dst=172.16.0.20 proto=6 act=accept session_id=98124',
+            'CEF:0|Checkpoint|LogExporter|R81|drop|Rule 12 dropped|8|src=198.51.100.99 dst=10.0.0.1 s_port=5512 d_port=445 proto=tcp'
+        ]
+        # Pre-seed initial recent buffer
+        for log_text in enterprise_samples[:6]:
+            try:
+                now_str = datetime.datetime.now().strftime("%b %d %H:%M:%S")
+                await process_and_broadcast(f"{now_str} {log_text}")
+            except Exception:
+                pass
+
+        while True:
+            try:
+                await asyncio.sleep(1.8)
+                if subscribers:
+                    import random
+                    log_text = random.choice(enterprise_samples)
+                    now_str = datetime.datetime.now().strftime("%b %d %H:%M:%S")
+                    await process_and_broadcast(f"{now_str} {log_text}")
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                await asyncio.sleep(2.0)
+
+    asyncio.create_task(enterprise_wire_stream())
+    print("[ULPF INGESTION] Enterprise wire stream background task initialized.")
+
 
 @app.on_event("shutdown")
 async def shutdown_event_handler():

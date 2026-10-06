@@ -138,18 +138,19 @@ export const App: React.FC = () => {
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
 
-  // 2. Real SSE Stream from FastAPI Backend (Batched for smooth 60fps UI performance)
+  // 2. Real SSE Stream from FastAPI Backend (Instant, fluid ingestion)
   useEffect(() => {
     let eventSource: EventSource | null = null;
-    let pendingBatch: ULPFLogRecord[] = [];
-    let flushTimer: any = null;
+    let animFrameId: number | null = null;
+    let pendingQueue: ULPFLogRecord[] = [];
 
-    const flushLogs = () => {
-      if (pendingBatch.length > 0) {
-        const batchToApply = [...pendingBatch];
-        pendingBatch = [];
-        setLogs(prev => [...batchToApply, ...prev].slice(0, 60));
+    const flushQueue = () => {
+      if (pendingQueue.length > 0) {
+        const nextBatch = [...pendingQueue];
+        pendingQueue = [];
+        setLogs(prev => [...nextBatch, ...prev].slice(0, 60));
       }
+      animFrameId = null;
     };
 
     const connectSSE = () => {
@@ -163,14 +164,11 @@ export const App: React.FC = () => {
         try {
           const record: ULPFLogRecord = JSON.parse(event.data);
           record.id = record.id || `live-${Date.now()}-${Math.random()}`;
-          pendingBatch.unshift(record);
+          pendingQueue.unshift(record);
           logCountRef.current += 1;
 
-          if (!flushTimer) {
-            flushTimer = setTimeout(() => {
-              flushTimer = null;
-              flushLogs();
-            }, 250); // 250ms batching prevents UI freezing and micro-stutter
+          if (!animFrameId) {
+            animFrameId = requestAnimationFrame(flushQueue);
           }
         } catch (e) {
           console.error("Error parsing live SSE event", e);
@@ -180,14 +178,14 @@ export const App: React.FC = () => {
       eventSource.onerror = () => {
         setIsStreaming(false);
         if (eventSource) eventSource.close();
-        setTimeout(connectSSE, 4000);
+        setTimeout(connectSSE, 3000);
       };
     };
 
     connectSSE();
 
     return () => {
-      if (flushTimer) clearTimeout(flushTimer);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
       if (eventSource) eventSource.close();
     };
   }, []);
