@@ -54,6 +54,7 @@ def worker_ingest_loop(
             if batch is None:  # Sentinel
                 break
 
+            rows_to_insert = []
             for raw_line in batch:
                 routed = registry.route_and_parse(raw_line)
                 if routed:
@@ -82,14 +83,19 @@ def worker_ingest_loop(
                 raw_sha = envelope["traceability"]["raw_sha256"]
                 leaf_hash = hash_leaf(raw_sha.encode("ascii"))
                 leaf_hashes.append(leaf_hash)
-                
-                # Persist to local shard table
-                conn.execute(
-                    "INSERT INTO shard_records (shard_id, raw_sha256, class_uid, activity_name, created_at) VALUES (?, ?, ?, ?, ?)",
-                    (worker_id, raw_sha, envelope["normalized_data"].get("class_uid", 6001), envelope["normalized_data"].get("activity_name", "event"), time.time())
-                )
+                rows_to_insert.append((
+                    worker_id,
+                    raw_sha,
+                    envelope["normalized_data"].get("class_uid", 6001),
+                    envelope["normalized_data"].get("activity_name", "event"),
+                    time.time()
+                ))
                 processed_count += 1
 
+            conn.executemany(
+                "INSERT INTO shard_records (shard_id, raw_sha256, class_uid, activity_name, created_at) VALUES (?, ?, ?, ?, ?)",
+                rows_to_insert
+            )
             conn.commit()
             task_queue.task_done()
 

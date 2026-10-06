@@ -226,7 +226,7 @@ export const App: React.FC = () => {
 
               <div className="flex items-center space-x-2.5 whitespace-nowrap">
                 <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white uppercase font-mono whitespace-nowrap">
-                  ULPF SENTINEL <span className="text-slate-400 dark:text-slate-500 font-normal">//</span> AIR-GAP
+                  AEGISGUARD-ULPF <span className="text-slate-400 dark:text-slate-500 font-normal">//</span> AIR-GAP
                 </h1>
                 <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-50 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 border border-cyan-200/80 dark:border-cyan-800/60 font-mono shadow-xs shrink-0">
                   OCSF v1.1.0
@@ -985,7 +985,7 @@ export const App: React.FC = () => {
               {/* Modal Footer */}
               <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-[11px] font-mono text-slate-400">
-                  ULPF Sentinel Enclave · v2.4.0
+                  AegisGuard-ULPF Sovereign Enclave · v2.0.0
                 </span>
                 <button
                   type="button"

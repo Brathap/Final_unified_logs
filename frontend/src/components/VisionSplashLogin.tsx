@@ -349,10 +349,10 @@ export const VisionSplashLogin: React.FC<VisionSplashLoginProps> = ({ onAuthenti
             >
               <div className="flex items-center justify-center space-x-2.5">
                 <span className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
-                  ULPF
+                  AEGISGUARD
                 </span>
                 <span className="text-2xl sm:text-4xl font-black tracking-tight bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent font-mono">
-                  SENTINEL
+                  ULPF
                 </span>
               </div>
               <motion.p 

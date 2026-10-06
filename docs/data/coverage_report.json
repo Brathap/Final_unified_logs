@@ -1,91 +1,141 @@
 {
   "Loghub OpenSSH 2k": {
     "total_records": 2000,
-    "full_parsed": 1131,
-    "partial_parsed": 136,
-    "unparsed": 733,
+    "full_parsed": 1368,
+    "partial_parsed": 632,
+    "unparsed": 0,
     "emitted_ocsf": 2000,
-    "parsed_pct": 56.55,
-    "partial_pct": 6.8,
-    "unparsed_pct": 36.65,
+    "parsed_pct": 68.4,
+    "partial_pct": 31.6,
+    "unparsed_pct": 0.0,
     "emitted_pct": 100.0,
-    "misses": [
+    "top_misses": [
       {
-        "line_no": 1,
-        "raw_sample": "Dec 10 06:55:46 LabSZ sshd[24200]: reverse mapping checking getaddrinfo for ns.marryaldkfaczcz.com [173.234.31.186] fail",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 06:55:46 LabSZ sshd[24200]: pam_unix(sshd:auth): chec",
+        "count": 1,
+        "sample": "Dec 10 06:55:46 LabSZ sshd[24200]: pam_unix(sshd:auth): check pass; user unknown"
       },
       {
-        "line_no": 3,
-        "raw_sample": "Dec 10 06:55:46 LabSZ sshd[24200]: input_userauth_request: invalid user webmaster [preauth]",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 06:55:46 LabSZ sshd[24200]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 06:55:46 LabSZ sshd[24200]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
       },
       {
-        "line_no": 7,
-        "raw_sample": "Dec 10 06:55:48 LabSZ sshd[24200]: Connection closed by 173.234.31.186 [preauth]",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:07:38 LabSZ sshd[24206]: pam_unix(sshd:auth): chec",
+        "count": 1,
+        "sample": "Dec 10 07:07:38 LabSZ sshd[24206]: pam_unix(sshd:auth): check pass; user unknown"
       },
       {
-        "line_no": 8,
-        "raw_sample": "Dec 10 07:02:47 LabSZ sshd[24203]: Connection closed by 212.47.254.145 [preauth]",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:07:38 LabSZ sshd[24206]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 07:07:38 LabSZ sshd[24206]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
       },
       {
-        "line_no": 10,
-        "raw_sample": "Dec 10 07:07:38 LabSZ sshd[24206]: input_userauth_request: invalid user test9 [preauth]",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:08:28 LabSZ sshd[24208]: pam_unix(sshd:auth): chec",
+        "count": 1,
+        "sample": "Dec 10 07:08:28 LabSZ sshd[24208]: pam_unix(sshd:auth): check pass; user unknown"
+      },
+      {
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:08:28 LabSZ sshd[24208]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 07:08:28 LabSZ sshd[24208]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
+      },
+      {
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:11:42 LabSZ sshd[24224]: pam_unix(sshd:auth): chec",
+        "count": 1,
+        "sample": "Dec 10 07:11:42 LabSZ sshd[24224]: pam_unix(sshd:auth): check pass; user unknown"
+      },
+      {
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:11:42 LabSZ sshd[24224]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 07:11:42 LabSZ sshd[24224]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
+      },
+      {
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:13:31 LabSZ sshd[24227]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 07:13:31 LabSZ sshd[24227]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
+      },
+      {
+        "pattern": "[linux_openssh_8.x] Partial extraction: Dec 10 07:27:50 LabSZ sshd[24235]: pam_unix(sshd:auth): auth",
+        "count": 1,
+        "sample": "Dec 10 07:27:50 LabSZ sshd[24235]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid="
       }
     ]
   },
   "Loghub Linux Syslog 2k": {
     "total_records": 2000,
     "full_parsed": 489,
-    "partial_parsed": 266,
-    "unparsed": 1245,
+    "partial_parsed": 483,
+    "unparsed": 1028,
     "emitted_ocsf": 2000,
     "parsed_pct": 24.45,
-    "partial_pct": 13.3,
-    "unparsed_pct": 62.25,
+    "partial_pct": 24.15,
+    "unparsed_pct": 51.4,
     "emitted_pct": 100.0,
-    "misses": [
+    "top_misses": [
       {
-        "line_no": 14,
-        "raw_sample": "Jun 15 04:06:18 combo su(pam_unix)[21416]: session opened for user cyrus by (uid=0)",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: Jun 30 20",
+        "count": 46,
+        "sample": "Jun 30 20:53:04 combo klogind[19272]: Authentication failed from 163.27.187.39 (163.27.187.39): Perm"
       },
       {
-        "line_no": 15,
-        "raw_sample": "Jun 15 04:06:19 combo su(pam_unix)[21416]: session closed for user cyrus",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: Jul  9 12",
+        "count": 41,
+        "sample": "Jul  9 12:16:49 combo ftpd[23140]: connection from 211.167.68.59 () at Sat Jul  9 12:16:49 2005"
       },
       {
-        "line_no": 16,
-        "raw_sample": "Jun 15 04:06:20 combo logrotate: ALERT exited abnormally with [1]",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: Jul 17 06",
+        "count": 30,
+        "sample": "Jul 17 06:13:37 combo ftpd[23574]: connection from 83.116.207.11 (aml-sfh-3310b.adsl.wanadoo.nl) at "
       },
       {
-        "line_no": 17,
-        "raw_sample": "Jun 15 04:12:42 combo su(pam_unix)[22644]: session opened for user news by (uid=0)",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: Jul 24 02",
+        "count": 25,
+        "sample": "Jul 24 02:38:22 combo ftpd[16773]: connection from 84.102.20.2 () at Sun Jul 24 02:38:22 2005"
       },
       {
-        "line_no": 18,
-        "raw_sample": "Jun 15 04:12:43 combo su(pam_unix)[22644]: session closed for user news",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: Jul 25 23",
+        "count": 25,
+        "sample": "Jul 25 23:23:13 combo ftpd[26463]: getpeername (ftpd): Transport endpoint is not connected"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: Jun 22 13",
+        "count": 23,
+        "sample": "Jun 22 13:16:30 combo ftpd[17886]: connection from 210.245.165.136 () at Wed Jun 22 13:16:30 2005"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: Jun 29 03",
+        "count": 23,
+        "sample": "Jun 29 03:22:22 combo ftpd[13262]: connection from 61.74.96.178 () at Wed Jun 29 03:22:22 2005"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: Jun 29 10",
+        "count": 23,
+        "sample": "Jun 29 10:48:01 combo ftpd[15547]: connection from 208.62.55.75 () at Wed Jun 29 10:48:01 2005"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: Jul  1 07",
+        "count": 23,
+        "sample": "Jul  1 07:57:30 combo ftpd[21952]: connection from 202.82.200.188 () at Fri Jul  1 07:57:30 2005"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: Jul  3 10",
+        "count": 23,
+        "sample": "Jul  3 10:05:25 combo ftpd[32069]: connection from 203.101.45.59 (dsl-Chn-static-059.45.101.203.touc"
       }
     ]
   },
   "Loghub Apache Web 2k": {
     "total_records": 2000,
-    "full_parsed": 32,
-    "partial_parsed": 1968,
+    "full_parsed": 2000,
+    "partial_parsed": 0,
     "unparsed": 0,
     "emitted_ocsf": 2000,
-    "parsed_pct": 1.6,
-    "partial_pct": 98.4,
+    "parsed_pct": 100.0,
+    "partial_pct": 0.0,
     "unparsed_pct": 0.0,
     "emitted_pct": 100.0,
-    "misses": []
+    "top_misses": []
   },
   "Loghub Proxifier 2k": {
     "total_records": 2000,
@@ -97,70 +147,69 @@
     "partial_pct": 0.0,
     "unparsed_pct": 39.3,
     "emitted_pct": 100.0,
-    "misses": [
+    "top_misses": [
       {
-        "line_no": 154,
-        "raw_sample": "[10.30 16:51:56] svchost.exe *64 - proxy.cse.cuhk.edu.hk:5070 close, 303 bytes sent, 275 bytes received, lifetime <1 sec",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: [07.26 15",
+        "count": 119,
+        "sample": "[07.26 15:04:20] chrome.exe *64 - long.open.weixin.qq.com:443 close, 1910 bytes (1.86 KB) sent, 276 "
       },
       {
-        "line_no": 158,
-        "raw_sample": "[10.30 16:52:25] svchost.exe *64 - proxy.cse.cuhk.edu.hk:5070 close, 301 bytes sent, 278 bytes received, lifetime <1 sec",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: [07.26 17",
+        "count": 111,
+        "sample": "[07.26 17:03:31] chrome.exe *64 - clients4.google.com:443 open through proxy proxy.cse.cuhk.edu.hk:5"
       },
       {
-        "line_no": 253,
-        "raw_sample": "[10.30 17:15:42] QQ.exe - tcpconn6.tencent.com:443 error : A connection request was canceled before the completion.",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: [07.26 14",
+        "count": 107,
+        "sample": "[07.26 14:03:57] chrome.exe *64 - notifications.google.com:443 close, 470 bytes sent, 4856 bytes (4."
       },
       {
-        "line_no": 254,
-        "raw_sample": "[10.30 17:16:10] QQ.exe - tcpconn4.tencent.com:80 error : Could not connect through proxy proxy.cse.cuhk.edu.hk:5070 - P",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: [07.26 13",
+        "count": 90,
+        "sample": "[07.26 13:30:34] chrome.exe *64 - www.baidu.com:80 open through proxy proxy.cse.cuhk.edu.hk:5070 HTT"
       },
       {
-        "line_no": 428,
-        "raw_sample": "[10.30 17:57:12] YodaoDict.exe - oimagec7.ydstatic.com:80 error : A connection request was canceled before the completio",
-        "reason": "No registered pack detection signature matched"
+        "pattern": "[UNPARSED] Signature prefix: [07.26 16",
+        "count": 53,
+        "sample": "[07.26 16:06:32] chrome.exe *64 - www.evernote.com:443 open through proxy proxy.cse.cuhk.edu.hk:5070"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: [07.27 10",
+        "count": 51,
+        "sample": "[07.27 10:02:34] chrome.exe *64 - notifications.google.com:443 open through proxy proxy.cse.cuhk.edu"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: [07.26 21",
+        "count": 50,
+        "sample": "[07.26 21:18:02] chrome.exe *64 - clients5.google.com:443 close, 465 bytes sent, 4790 bytes (4.67 KB"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: [07.27 05",
+        "count": 36,
+        "sample": "[07.27 05:02:32] chrome.exe *64 - qa.sockets.stackexchange.com:443 close, 4755 bytes (4.64 KB) sent,"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: [07.26 18",
+        "count": 28,
+        "sample": "[07.26 18:04:49] chrome.exe *64 - c.trello.com:443 open through proxy proxy.cse.cuhk.edu.hk:5070 HTT"
+      },
+      {
+        "pattern": "[UNPARSED] Signature prefix: [07.27 09",
+        "count": 25,
+        "sample": "[07.27 09:00:14] chrome.exe *64 - clientservices.googleapis.com:443 open through proxy proxy.cse.cuh"
       }
     ]
   },
   "Loghub HDFS 2k": {
     "total_records": 2000,
-    "full_parsed": 0,
+    "full_parsed": 2000,
     "partial_parsed": 0,
-    "unparsed": 2000,
+    "unparsed": 0,
     "emitted_ocsf": 2000,
-    "parsed_pct": 0.0,
+    "parsed_pct": 100.0,
     "partial_pct": 0.0,
-    "unparsed_pct": 100.0,
+    "unparsed_pct": 0.0,
     "emitted_pct": 100.0,
-    "misses": [
-      {
-        "line_no": 1,
-        "raw_sample": "081109 203615 148 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_38865049064139660 terminating",
-        "reason": "No registered pack detection signature matched"
-      },
-      {
-        "line_no": 2,
-        "raw_sample": "081109 203807 222 INFO dfs.DataNode$PacketResponder: PacketResponder 0 for block blk_-6952295868487656571 terminating",
-        "reason": "No registered pack detection signature matched"
-      },
-      {
-        "line_no": 3,
-        "raw_sample": "081109 204005 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.73.220:50010 is added",
-        "reason": "No registered pack detection signature matched"
-      },
-      {
-        "line_no": 4,
-        "raw_sample": "081109 204015 308 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_8229193803249955061 terminating",
-        "reason": "No registered pack detection signature matched"
-      },
-      {
-        "line_no": 5,
-        "raw_sample": "081109 204106 329 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_-6670958622368987959 terminating",
-        "reason": "No registered pack detection signature matched"
-      }
-    ]
+    "top_misses": []
   }
 }

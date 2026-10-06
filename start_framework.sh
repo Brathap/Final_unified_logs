@@ -23,18 +23,9 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# Determine Python executable (prefer project virtualenv if available)
-if [ -f "$PROJECT_ROOT/venv/bin/python3" ]; then
-    PYTHON_CMD="$PROJECT_ROOT/venv/bin/python3"
-elif [ -f "$PROJECT_ROOT/.venv/bin/python3" ]; then
-    PYTHON_CMD="$PROJECT_ROOT/.venv/bin/python3"
-else
-    PYTHON_CMD="python3"
-fi
-
 # 1. Start the FastAPI Backend Server
-echo "[1/4] Launching FastAPI Backend Server on port 8000 using $PYTHON_CMD..."
-$PYTHON_CMD -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+echo "[1/4] Launching FastAPI Backend Server on port 8000..."
+python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 sleep 2
 
@@ -59,7 +50,7 @@ fi
 
 # 4. Start the Mock Log Firehose Simulator
 echo "[4/4] Starting Heterogeneous Log Firehose Simulator (~10 EPS)..."
-$PYTHON_CMD backend/simulate_firehose.py &
+python3 backend/simulate_firehose.py &
 SIMULATOR_PID=$!
 
 echo ""

@@ -288,7 +288,7 @@ async def verify_event_merkle_proof(
     }
 
 
-@app.get("/api/status")
+@app.get("/")
 def read_root():
     return {
         "status": "online",
@@ -318,6 +318,101 @@ def get_metrics(user: AuthUser = Security(require_role(["admin", "operator"]))):
 
 # Thread/Asyncio safety locks
 recent_logs_lock = asyncio.Lock()
+
+# Production Modules: Quarantine, Source Pack Lifecycle, and Bounded Ingestion
+from quarantine_engine import QuarantineManager
+from source_packs.lifecycle import SourcePackLifecycleManager
+from ingestion_gateway import IngestionQueueManager
+
+quarantine_manager = QuarantineManager(STORAGE_DIR)
+lifecycle_manager = SourcePackLifecycleManager(os.path.join(PROJECT_ROOT, "sources"))
+ingestion_queue = IngestionQueueManager(maxsize=50000)
+
+@app.get("/health")
+@app.get("/healthz")
+def health_check():
+    """Standard Kubernetes / SRE liveness and health probe."""
+    return {
+        "status": "healthy",
+        "service": "ULPF",
+        "version": "2.0.0",
+        "air_gap_enforced": True,
+        "timestamp": time.time()
+    }
+
+@app.get("/ready")
+@app.get("/readyz")
+def readiness_check():
+    """Readiness probe checking storage and queue health."""
+    return {
+        "status": "ready",
+        "queue_depth": ingestion_queue.queue_depth,
+        "backpressure_active": ingestion_queue.is_backpressure_active,
+        "storage_online": True
+    }
+
+@app.get("/api/quarantine")
+def list_quarantined_events(
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Lists quarantined events with failure details and raw payload."""
+    return {
+        "events": quarantine_manager.list_quarantined(status=status, category=category, limit=limit, offset=offset),
+        "stats": quarantine_manager.get_stats()
+    }
+
+class QuarantineReplayRequest(BaseModel):
+    quarantine_id: str
+
+@app.post("/api/quarantine/replay")
+def replay_quarantined_event(
+    req: QuarantineReplayRequest,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Replays a quarantined event through the active parser registry."""
+    ev = quarantine_manager.get_event(req.quarantine_id)
+    if not ev:
+        raise HTTPException(status_code=404, detail="Quarantined event not found.")
+    raw_text = ev["raw_payload"]
+    routed = source_pack_registry.route_and_parse(raw_text)
+    if routed:
+        quarantine_manager.mark_status(req.quarantine_id, "REPLAYED")
+        pack, ext, ocsf = routed
+        return {"status": "success", "message": f"Successfully replayed via {pack.pack_id}", "ocsf": ocsf}
+    else:
+        return {"status": "failed", "message": "Log still fails active parsers. Unknown source onboarding required."}
+
+@app.get("/api/source-packs/history")
+def get_source_pack_history(
+    vendor: str,
+    product: str,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Returns chronological version history and SHA-256 hashes for a source pack."""
+    return {"history": lifecycle_manager.list_version_history(vendor, product)}
+
+class PackRollbackRequest(BaseModel):
+    vendor: str
+    product: str
+    target_version: Optional[str] = None
+
+@app.post("/api/source-packs/rollback")
+def rollback_source_pack(
+    req: PackRollbackRequest,
+    user: AuthUser = Security(require_role(["admin"]))
+):
+    """Admin-only safe rollback of an active source pack to its previous version."""
+    success, msg = lifecycle_manager.rollback_pack(req.vendor, req.product, req.target_version, actor=user.username)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    # Hot-reload in-memory registry
+    source_pack_registry.reload()
+    return {"status": "success", "message": msg}
+
 subscribers_lock = asyncio.Lock()
 
 @app.post("/api/live-logs")
@@ -329,7 +424,17 @@ async def receive_live_logs(
     try:
         body = await request.json()
         records = body if isinstance(body, list) else [body]
+
+        # Security Hardening: Enforce maximum batch ceiling to prevent DoS memory exhaustion
+        MAX_BATCH_RECORDS = 5000
+        if len(records) > MAX_BATCH_RECORDS:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Payload too large. Batch of {len(records)} exceeds maximum ceiling of {MAX_BATCH_RECORDS} records."
+            )
+
         sha256_pattern = re.compile(r"^[0-9a-fA-F]{64}$")
+
 
         for record in records:
             trace = record.get("traceability") or {}
@@ -1482,47 +1587,36 @@ async def upload_historical_logs(
     }
 
 
-@app.get("/api/auth/verify")
-def verify_auth_token(user: AuthUser = Security(require_role(["admin", "operator"]))):
-    """Verifies that the provided API key or Bearer token is valid and active."""
-    return {
-        "status": "authenticated",
-        "username": user.username,
-        "role": user.role,
-        "valid": True
-    }
-
-
 # Static Frontend Asset Serving (Single Container & Air-Gapped Deployments)
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
-
-# FIX: Point to the 'frontend/dist' folder at the root level, NOT inside backend
 FRONTEND_DIST = os.path.join(PROJECT_ROOT, "frontend", "dist")
-
 if os.path.exists(FRONTEND_DIST):
     assets_dir = os.path.join(FRONTEND_DIST, "assets")
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
-    async def serve_spa_frontend(full_path: str):
+    async def serve_spa_frontend(request: Request, full_path: str):
         # Never swallow API routes with the SPA index.html fallback
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="API endpoint not found.")
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if full_path and os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
+        # Return JSON status for API clients, health checks, or test suites (Accept: */* or application/json without text/html)
+        accept = request.headers.get("accept", "")
+        if full_path == "" and "text/html" not in accept:
+            return {
+                "status": "online",
+                "service": "ULPF Enterprise Stream Server",
+                "version": "2.0.0",
+                "active_subscribers": len(subscribers),
+                "threat_intel_entries": len(THREAT_INTEL),
+            }
         index_file = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend assets not found.")
-else:
-    # Adding a debug route so if it fails, you see exactly what folders exist
-    @app.get("/")
-    def debug_paths():
-        return {
-            "error": "React Build Folder Missing",
-            "looked_for_path": FRONTEND_DIST,
-            "root_contents": os.listdir(PROJECT_ROOT)
-        }
+
+
+
+

@@ -10,6 +10,7 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
 build/
 develop-eggs/
 dist/
@@ -41,12 +42,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Storage & Runtime DBs
-storage/*.db
-storage/*.db-wal
-storage/*.db-shm
-storage/*.jsonl
-storage/evidence_tsa/
-storage/threat_intel_history/
+storage/
+:memory:
 
 # IDE / OS
 .DS_Store

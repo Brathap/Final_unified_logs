@@ -1,4 +1,4 @@
-# AegisGuard-ULPF — Sovereign Telemetry Framework
+# ULPF — Sovereign Telemetry Framework
 **National Technical Research Organisation (NTRO) · Smart India Hackathon (SIH 26156)**
 
 [![Pytest Regression](https://img.shields.io/badge/Pytest-91%2F91%20PASS-brightgreen.svg)](tests/)
