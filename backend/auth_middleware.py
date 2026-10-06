@@ -19,23 +19,51 @@ from pydantic import BaseModel
 # Check environment mode
 ULPF_ENV = os.environ.get("ULPF_ENV", "development").lower()
 
-# Load credentials from environment
+import secrets
+import stat
+
 _ADMIN_KEY_ENV = os.environ.get("ULPF_ADMIN_KEY")
 _OPERATOR_KEY_ENV = os.environ.get("ULPF_OPERATOR_KEY")
 
 DEFAULT_USERS: Dict[str, Dict[str, str]] = {}
 
+# Persistent first-run bearer token generation with owner-only file permissions (0600)
+_TOKEN_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "storage", ".ulpf_bearer_token"))
+
+def _init_persistent_token() -> str:
+    if os.path.exists(_TOKEN_FILE):
+        try:
+            with open(_TOKEN_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+
+    # Generate new cryptographically secure 256-bit bearer token
+    token = secrets.token_hex(32)
+    os.makedirs(os.path.dirname(_TOKEN_FILE), exist_ok=True)
+    
+    # Write with owner-only read/write perms (chmod 0600)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    mode = stat.S_IRUSR | stat.S_IWUSR  # 0600
+    fd = os.open(_TOKEN_FILE, flags, mode)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(token)
+    return token
+
+_PERSISTENT_TOKEN = _init_persistent_token()
+
 if _ADMIN_KEY_ENV:
     DEFAULT_USERS[_ADMIN_KEY_ENV] = {"username": "secops_admin", "role": "admin"}
-elif ULPF_ENV != "production":
-    DEFAULT_USERS["ulpf_admin_secret_key_2026"] = {"username": "secops_admin", "role": "admin"}
 else:
-    raise RuntimeError("CRITICAL: ULPF_ADMIN_KEY environment variable MUST be set when ULPF_ENV=production")
+    DEFAULT_USERS[_PERSISTENT_TOKEN] = {"username": "secops_admin", "role": "admin"}
+    if ULPF_ENV != "production":
+        DEFAULT_USERS["ulpf_admin_secret_key_2026"] = {"username": "secops_admin", "role": "admin"}
 
 if _OPERATOR_KEY_ENV:
     DEFAULT_USERS[_OPERATOR_KEY_ENV] = {"username": "soc_operator", "role": "operator"}
 elif ULPF_ENV != "production":
     DEFAULT_USERS["ulpf_operator_key_2026"] = {"username": "soc_operator", "role": "operator"}
+
 
 
 class AuthUser(BaseModel):

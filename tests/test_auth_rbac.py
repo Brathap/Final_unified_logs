@@ -102,5 +102,23 @@ class TestAuthenticationAndRBAC(unittest.TestCase):
         self.assertIn("status_code", recent_audit)
 
 
+    def test_bearer_token_and_health_exemption(self):
+        """Verify Authorization: Bearer token format works and /health is exempt."""
+        # /health is exempt without token
+        health_res = self.client.get("/health")
+        self.assertEqual(health_res.status_code, 200)
+
+        # Protected route works with Authorization: Bearer header
+        bearer_headers = {"Authorization": f"Bearer {ADMIN_KEY}"}
+        metrics_res = self.client.get("/api/metrics", headers=bearer_headers)
+        self.assertEqual(metrics_res.status_code, 200)
+
+        # Verify persistent bearer token file has owner-only mode (0600)
+        from auth_middleware import _TOKEN_FILE
+        if os.path.exists(_TOKEN_FILE):
+            file_mode = oct(os.stat(_TOKEN_FILE).st_mode & 0o777)
+            self.assertEqual(file_mode, "0o600")
+
+
 if __name__ == "__main__":
     unittest.main()
