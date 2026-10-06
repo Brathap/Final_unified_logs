@@ -45,17 +45,12 @@ storage/*.db
 storage/*.db-wal
 storage/*.db-shm
 storage/*.jsonl
-storage/*.jsonl.*
 storage/evidence_tsa/
 storage/threat_intel_history/
-
-# Virtual Environments
-venv/
-.venv/
-
 
 # IDE / OS
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+realdata/

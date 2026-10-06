@@ -1,0 +1,166 @@
+{
+  "Loghub OpenSSH 2k": {
+    "total_records": 2000,
+    "full_parsed": 1131,
+    "partial_parsed": 136,
+    "unparsed": 733,
+    "emitted_ocsf": 2000,
+    "parsed_pct": 56.55,
+    "partial_pct": 6.8,
+    "unparsed_pct": 36.65,
+    "emitted_pct": 100.0,
+    "misses": [
+      {
+        "line_no": 1,
+        "raw_sample": "Dec 10 06:55:46 LabSZ sshd[24200]: reverse mapping checking getaddrinfo for ns.marryaldkfaczcz.com [173.234.31.186] fail",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 3,
+        "raw_sample": "Dec 10 06:55:46 LabSZ sshd[24200]: input_userauth_request: invalid user webmaster [preauth]",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 7,
+        "raw_sample": "Dec 10 06:55:48 LabSZ sshd[24200]: Connection closed by 173.234.31.186 [preauth]",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 8,
+        "raw_sample": "Dec 10 07:02:47 LabSZ sshd[24203]: Connection closed by 212.47.254.145 [preauth]",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 10,
+        "raw_sample": "Dec 10 07:07:38 LabSZ sshd[24206]: input_userauth_request: invalid user test9 [preauth]",
+        "reason": "No registered pack detection signature matched"
+      }
+    ]
+  },
+  "Loghub Linux Syslog 2k": {
+    "total_records": 2000,
+    "full_parsed": 489,
+    "partial_parsed": 266,
+    "unparsed": 1245,
+    "emitted_ocsf": 2000,
+    "parsed_pct": 24.45,
+    "partial_pct": 13.3,
+    "unparsed_pct": 62.25,
+    "emitted_pct": 100.0,
+    "misses": [
+      {
+        "line_no": 14,
+        "raw_sample": "Jun 15 04:06:18 combo su(pam_unix)[21416]: session opened for user cyrus by (uid=0)",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 15,
+        "raw_sample": "Jun 15 04:06:19 combo su(pam_unix)[21416]: session closed for user cyrus",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 16,
+        "raw_sample": "Jun 15 04:06:20 combo logrotate: ALERT exited abnormally with [1]",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 17,
+        "raw_sample": "Jun 15 04:12:42 combo su(pam_unix)[22644]: session opened for user news by (uid=0)",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 18,
+        "raw_sample": "Jun 15 04:12:43 combo su(pam_unix)[22644]: session closed for user news",
+        "reason": "No registered pack detection signature matched"
+      }
+    ]
+  },
+  "Loghub Apache Web 2k": {
+    "total_records": 2000,
+    "full_parsed": 32,
+    "partial_parsed": 1968,
+    "unparsed": 0,
+    "emitted_ocsf": 2000,
+    "parsed_pct": 1.6,
+    "partial_pct": 98.4,
+    "unparsed_pct": 0.0,
+    "emitted_pct": 100.0,
+    "misses": []
+  },
+  "Loghub Proxifier 2k": {
+    "total_records": 2000,
+    "full_parsed": 1214,
+    "partial_parsed": 0,
+    "unparsed": 786,
+    "emitted_ocsf": 2000,
+    "parsed_pct": 60.7,
+    "partial_pct": 0.0,
+    "unparsed_pct": 39.3,
+    "emitted_pct": 100.0,
+    "misses": [
+      {
+        "line_no": 154,
+        "raw_sample": "[10.30 16:51:56] svchost.exe *64 - proxy.cse.cuhk.edu.hk:5070 close, 303 bytes sent, 275 bytes received, lifetime <1 sec",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 158,
+        "raw_sample": "[10.30 16:52:25] svchost.exe *64 - proxy.cse.cuhk.edu.hk:5070 close, 301 bytes sent, 278 bytes received, lifetime <1 sec",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 253,
+        "raw_sample": "[10.30 17:15:42] QQ.exe - tcpconn6.tencent.com:443 error : A connection request was canceled before the completion.",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 254,
+        "raw_sample": "[10.30 17:16:10] QQ.exe - tcpconn4.tencent.com:80 error : Could not connect through proxy proxy.cse.cuhk.edu.hk:5070 - P",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 428,
+        "raw_sample": "[10.30 17:57:12] YodaoDict.exe - oimagec7.ydstatic.com:80 error : A connection request was canceled before the completio",
+        "reason": "No registered pack detection signature matched"
+      }
+    ]
+  },
+  "Loghub HDFS 2k": {
+    "total_records": 2000,
+    "full_parsed": 0,
+    "partial_parsed": 0,
+    "unparsed": 2000,
+    "emitted_ocsf": 2000,
+    "parsed_pct": 0.0,
+    "partial_pct": 0.0,
+    "unparsed_pct": 100.0,
+    "emitted_pct": 100.0,
+    "misses": [
+      {
+        "line_no": 1,
+        "raw_sample": "081109 203615 148 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_38865049064139660 terminating",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 2,
+        "raw_sample": "081109 203807 222 INFO dfs.DataNode$PacketResponder: PacketResponder 0 for block blk_-6952295868487656571 terminating",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 3,
+        "raw_sample": "081109 204005 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.73.220:50010 is added",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 4,
+        "raw_sample": "081109 204015 308 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_8229193803249955061 terminating",
+        "reason": "No registered pack detection signature matched"
+      },
+      {
+        "line_no": 5,
+        "raw_sample": "081109 204106 329 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_-6670958622368987959 terminating",
+        "reason": "No registered pack detection signature matched"
+      }
+    ]
+  }
+}
