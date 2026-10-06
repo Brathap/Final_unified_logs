@@ -3,16 +3,16 @@ metadata:
   vendor: "Linux"
   product: "OpenSSH"
   version: "8.x"
-  priority: 110
+  priority: 115
   description: "Standard Linux SSHD authentication logs (RFC 3164 syslog format)."
 
 detection:
   match_regex:
-    - "sshd\\[\\d+\\]:\\s+(?:Accepted|Failed|Invalid user)"
+    - "sshd\\[\\d+\\]:"
 
 parser:
   type: "regex"
-  pattern: "sshd\\[\\d+\\]:\\s+(?P<auth_status>Accepted|Failed|Invalid user)\\s+(?:password for (?:invalid user )?|publickey for )?(?P<user_name>\\w+)?(?: from )?(?P<src_ip>[0-9.]+)?(?: port )?(?P<src_port>\\d+)?"
+  pattern: "sshd\\[\\d+\\]:\\s+(?P<auth_status>Accepted|Failed|Invalid user|Connection closed by|Received disconnect from|input_userauth_request:|reverse mapping checking|pam_unix)?(?:\\s*(?:password for (?:invalid user )?|publickey for )?(?P<user_name>\\w+)?(?: from | by )?(?P<src_ip>[0-9.]+)?(?: port )?(?P<src_port>\\d+)?)?(?P<rest>.*)"
 
 ocsf:
   class_uid: 3002
@@ -24,3 +24,4 @@ mappings:
   "src_endpoint.ip": "src_ip"
   "src_endpoint.port": "src_port"
   "status": "auth_status"
+  "status_detail": "rest"

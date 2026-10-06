@@ -1,7 +1,7 @@
 # AegisGuard-ULPF — Sovereign Telemetry Framework
 **National Technical Research Organisation (NTRO) · Smart India Hackathon (SIH 26156)**
 
-[![Pytest Regression](https://img.shields.io/badge/Pytest-88%2F88%20PASS-brightgreen.svg)](tests/)
+[![Pytest Regression](https://img.shields.io/badge/Pytest-91%2F91%20PASS-brightgreen.svg)](tests/)
 [![Official Requirements](https://img.shields.io/badge/SIH26156%20Coverage-(a)%20through%20(k)%20100%25-brightgreen.svg)](docs/SIH26156_REQUIREMENT_TRACEABILITY.md)
 [![Air-Gap Audit](https://img.shields.io/badge/Air--Gap-EPERM%20Fail--Closed-success.svg)](scripts/airgap_proof.sh)
 [![OCSF Pinned](https://img.shields.io/badge/OCSF-v1.1.0%20Enterprise-orange.svg)](docs/schema/OCSF_VERSION.md)
@@ -10,10 +10,10 @@
 ---
 
 ## 5-Line Executive Summary
-1. **The Problem:** Disparate perimeter security devices emit incompatible log formats; unverified parsing mutates raw strings and destroys evidentiary chain-of-custody required for forensics.
-2. **Lossless Wire Vault:** Ingests raw perimeter telemetry, preserving exact wire bytes in Base64 alongside pre-transformation SHA-256 digests (0% dropped).
-3. **OCSF v1.1.0 & Byte Lineage:** Normalizes heterogeneous streams into pinned OCSF v1.1.0 schemas while generating character-exact `[start, end]` span coordinates directly back to the raw wire.
-4. **Tamper-Evident Ledger:** Implements RFC 6962 Merkle trees with Ed25519-signed checkpoints, independently verifiable offline with `verify_bundle.py`.
+1. **The Problem:** Disparate perimeter security appliances emit incompatible log formats; unverified parsing mutates strings and destroys evidentiary chain-of-custody.
+2. **Lossless Wire Vault:** Ingests raw telemetry, preserving exact wire bytes in Base64 alongside pre-transformation SHA-256 digests (0 records lost: all lines preserved and emitted).
+3. **OCSF v1.1.0 & Byte Lineage:** Normalizes heterogeneous streams into pinned OCSF v1.1.0 schemas with character-exact `[start, end]` span coordinates directly back to the raw wire.
+4. **Tamper-Evident Ledger:** Implements RFC 6962 Merkle trees with Ed25519-signed checkpoints and external head anchoring (`ulpf anchor`), independently verifiable with `verify_bundle.py`.
 5. **Air-Gap Sovereign Core:** Enforces kernel-level egress socket interception (`EPERM`), 0 external cloud calls, and deterministic offline parser drafting with a mandatory human approval gate.
 
 ---
@@ -28,34 +28,70 @@ Run verification command:
 python3 tools/fetch_datasets.py && python3 tools/measure_coverage.py
 ```
 
-| Corpus Name | Records | Full Parsed % | Partial % | Unparsed % | Emitted as OCSF | Status |
+| Corpus Name | Records | Full Parsed % | Partial % | Unparsed % | Unparsed Lines Preserved | Validation Level |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Loghub OpenSSH 2k** | 2,000 | **56.55%** (1,131) | **6.80%** (136) | **36.65%** (733) | **100.0%** (2,000) | **PASS** |
-| **Loghub Linux Syslog 2k** | 2,000 | **24.45%** (489) | **13.30%** (266) | **62.25%** (1,245) | **100.0%** (2,000) | **PASS** |
-| **Loghub Apache Web 2k** | 2,000 | **1.60%** (32) | **98.40%** (1,968) | **0.00%** (0) | **100.0%** (2,000) | **PASS** |
-| **Loghub Proxifier 2k** | 2,000 | **60.70%** (1,214) | **0.00%** (0) | **39.30%** (786) | **100.0%** (2,000) | **PASS** |
-| **Loghub HDFS 2k** | 2,000 | **0.00%** (0) | **0.00%** (0) | **100.00%** (2,000) | **100.0%** (2,000) | **PASS** |
-| **TOTAL** | **10,000** | — | — | — | **100.0% (10,000 / 10,000)** | **0% DROPPED** |
+| **Loghub OpenSSH 2k** | 2,000 | **68.40%** (1,368) | **31.60%** (632) | **0.00%** (0) | **YES (2,000 / 2,000)** | Real-data validated |
+| **Loghub Linux Syslog 2k** | 2,000 | **24.45%** (489) | **24.15%** (483) | **51.40%** (1,028) | **YES (2,000 / 2,000)** | Real-data validated |
+| **Loghub Apache Web 2k** | 2,000 | **100.00%** (2,000) | **0.00%** (0) | **0.00%** (0) | **YES (2,000 / 2,000)** | Real-data validated |
+| **Loghub Proxifier 2k** | 2,000 | **60.70%** (1,214) | **0.00%** (0) | **39.30%** (786) | **YES (2,000 / 2,000)** | Real-data validated |
+| **Loghub HDFS 2k** | 2,000 | **100.00%** (2,000) | **0.00%** (0) | **0.00%** (0) | **YES (2,000 / 2,000)** | Real-data validated |
+| **AGGREGATE TOTAL** | **10,000** | **70.71%** (7,071) | **11.15%** (1,115) | **18.14%** (1,814) | **YES (10,000 / 10,000)** | **0 records lost: all lines preserved and emitted** |
 
-*Detailed per-corpus miss analysis: [`docs/DATASETS.md`](docs/DATASETS.md)*
+*Detailed per-corpus miss patterns: [`docs/DATASETS.md`](docs/DATASETS.md)*
 
-### 2. Measured Ingestion Throughput & Machine Testbed
+### 2. Multi-Vendor Source Pack Validation Matrix
+
+| Vendor / Product | Wire Format | Primary OCSF Class | Validation Level | Primary Rule File |
+|:---|:---|:---|:---|:---|
+| **Cisco ASA** | Syslog / Regex | Class 4001 (Network Activity) | Real-data validated | [`sources/vendors/cisco_asa.yaml`](sources/vendors/cisco_asa.yaml) |
+| **ArcSight CEF Standard** | Pipe-Delimited CEF | Class 2001 (Security Finding) | Real-data validated | [`sources/vendors/cef_standard.yaml`](sources/vendors/cef_standard.yaml) |
+| **Linux OpenSSH** | Syslog / Regex | Class 3002 (Identity & Access) | Real-data validated | [`sources/vendors/linux_ssh.yaml`](sources/vendors/linux_ssh.yaml) |
+| **Linux Syslog / Kernel** | RFC 3164 Syslog | Class 3002 (Identity & Access) | Real-data validated | [`sources/vendors/linux_syslog.yaml`](sources/vendors/linux_syslog.yaml) |
+| **Apache HTTP Server** | Error / Access Log | Class 6001 (Application Activity) | Real-data validated | [`sources/vendors/apache_http.yaml`](sources/vendors/apache_http.yaml) |
+| **Initex Proxifier** | Tunnel Client Log | Class 4001 (Network Activity) | Real-data validated | [`sources/vendors/proxifier.yaml`](sources/vendors/proxifier.yaml) |
+| **Apache Hadoop HDFS** | Cluster Daemon Log | Class 1001 (System Activity) | Real-data validated | [`sources/vendors/hdfs_cluster.yaml`](sources/vendors/hdfs_cluster.yaml) |
+| **Fortinet FortiGate** | Key-Value Pairs | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/fortigate_kv.yaml`](sources/vendors/fortigate_kv.yaml) |
+| **Check Point Log Exporter** | Pipe Key-Value | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/checkpoint_log_exporter.yaml`](sources/vendors/checkpoint_log_exporter.yaml) |
+| **Juniper SRX Gateway** | RFC 5424 Structured | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/juniper_srx.yaml`](sources/vendors/juniper_srx.yaml) |
+| **OISF Suricata EVE** | Line JSON | Class 2001 (Security Finding) | Documentation-derived, unproven | [`sources/vendors/suricata_eve.yaml`](sources/vendors/suricata_eve.yaml) |
+| **Zeek Project conn** | TSV (#fields header) | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/zeek_conn.yaml`](sources/vendors/zeek_conn.yaml) |
+| **Netgate pfSense filterlog** | CSV Delimited | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/pfsense_filterlog.yaml`](sources/vendors/pfsense_filterlog.yaml) |
+| **SonicWall SonicOS** | Key-Value Pairs | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/sonicwall_sonicos.yaml`](sources/vendors/sonicwall_sonicos.yaml) |
+| **Squid Web Proxy** | Native Access Log | Class 4001 (Network Activity) | Documentation-derived, unproven | [`sources/vendors/squid_access.yaml`](sources/vendors/squid_access.yaml) |
+| **Generic LEEF Standard** | Tab Key-Value | Class 2001 (Security Finding) | Documentation-derived, unproven | [`sources/vendors/leef_standard.yaml`](sources/vendors/leef_standard.yaml) |
+
+### 3. Unknown-Source Deterministic Onboarding (Synthetic Evaluation)
+Run verification command:
+```bash
+python3 tools/measure_onboarding.py
+```
+*(Labelled synthetic: 5 fictional devices using RFC 5737 test addresses; strictly excluded from real-data corpus figures)*
+
+| Device Name (Fictional) | Wire Format Detected | Before Drafting Coverage | After Operator Approval Gate |
+|:---|:---|:---:|:---:|
+| **AegisCore-KV01** | KEY_VALUE | 0% (UNPARSED) | **100% (NORMALIZED)** |
+| **CyberMesh-JSON02** | JSON | 0% (UNPARSED) | **100% (NORMALIZED)** |
+| **IronGate-PIPE03** | PIPE_DELIMITED | 0% (UNPARSED) | **100% (NORMALIZED)** |
+| **ShadowVault-CSV04** | CSV | 0% (UNPARSED) | **100% (NORMALIZED)** |
+| **VoidShield-BRACKET05** | KEY_VALUE | 0% (UNPARSED) | **PARTIAL** |
+
+### 4. Ingestion Throughput Scaling Benchmark
 Run verification command:
 ```bash
 python3 benchmarks/benchmark_scaling.py
 ```
 * **Hardware Testbed:** AMD PRO A4-3350B APU (4 Cores @ 2.0 GHz), 3.3 GB RAM, Linux x86_64, Python 3.14.6.
 * **Workload:** Multi-vendor stream (Cisco ASA, CEF, FortiGate, Juniper SRX, pfSense).
+* **Methodology:** 3 runs per worker count; isolated per-shard SQLite WAL databases & shard Merkle trees; reporting median EPS.
 
-| Benchmark Mode | Workers | Measured Rate (EPS) | Latency / Checkpoint | Memory Footprint |
-|:---|:---:|:---:|:---:|:---:|
-| **Pure Regex Parsing (In-Memory)** | 1 | **> 100,000 EPS** | < 10 µs | Minimal |
-| **Streaming Pipeline (Memory + Merkle)** | 1 | **11,030 EPS** | p50: 85 µs / p99: 128 µs | 25.2 MB RSS |
-| **Full Persistence (SQLite WAL + Shard Merkle)** | 1 | **2,165 – 4,493 EPS** | Single worker persistence | 24.1 MB RSS |
-| **Full Persistence (Multiprocessing)** | 2 | **2,809 EPS** | Multi-shard WAL commit | 38.4 MB RSS |
-| **RFC 6962 Merkle Checkpoint (1,000 leaves)** | — | **~9 – 20 ms** | Domain separated (`0x00`/`0x01`) | — |
+| Worker Processes | Events per Run | Run 1 (EPS) | Run 2 (EPS) | Run 3 (EPS) | Median Measured Throughput |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **1 Worker** | 10,000 | 2,466 | 2,490 | 2,442 | **2,466 EPS** |
+| **2 Workers** | 10,000 | 3,637 | 3,899 | 3,682 | **3,682 EPS** (+49.3%) |
+| **4 Workers** | 10,000 | 4,601 | 4,625 | 4,704 | **4,625 EPS** (+87.5%) |
+| **8 Workers** | 10,000 | 3,949 | 3,914 | 3,623 | **3,914 EPS** (CPU contention) |
 
-*Scale Arithmetic vs Reality: 1 Billion events/day = 11,574 sustained EPS. Single Python worker reaches ~4,500 EPS with full WAL writes; horizontal multi-worker scaling is required for 1B/day sustained. Full design: [`docs/SCALING.md`](docs/SCALING.md).*
+*Scale Reality: 1 Billion events/day = 11,574 sustained EPS ($10^9 / 86,400\text{s}$). Single Python worker achieves ~2,466 – 4,625 EPS with full WAL writes; horizontal multi-worker scaling behind a broker is required for 1B/day sustained. Full analysis: [`docs/SCALING.md`](docs/SCALING.md).*
 
 ---
 
@@ -82,7 +118,7 @@ Every requirement corresponds directly to the official problem statement issued 
 ## ⚠️ Known Operational Limitations & Honest Engineering Scope
 
 1. **Python Single-Worker Line-Rate Ceiling:**  
-   A single Python process executing full end-to-end SQLite WAL persistence, character lineage, and cryptographic SHA-256 digests achieves ~4,200 – 4,700 EPS on commodity 4-core hardware. Sustaining 11,574 EPS (1 Billion events/day) requires horizontal multi-worker scaling behind an L4 load balancer or partitioned broker.
+   A single Python process executing full end-to-end SQLite WAL persistence, character lineage, and cryptographic SHA-256 digests achieves ~2,466 EPS on commodity 4-core hardware (scaling to 4,625 EPS with 4 workers). Sustaining 11,574 EPS (1 Billion events/day) requires horizontal multi-worker scaling behind an L4 load balancer or partitioned broker.
 2. **Software-Enforced vs Hardware WORM Immutability:**  
    ULPF enforces software append-only modes and rejects ID collisions in SQLite WAL. This provides **tamper-evident** integrity, but does not provide physical hardware write protection. True immutable write-once guarantees require optical storage (CD/DVD) or hardware S3 Object Lock.
 3. **Mandatory Human Approval Gate for Generated Parsers:**  
@@ -94,7 +130,7 @@ Every requirement corresponds directly to the official problem statement issued 
 
 ## ⚡ Quick Start & Verification Commands
 
-### 1. Run Complete Automated Regression Suite (88 Tests)
+### 1. Run Complete Automated Regression Suite (91 Tests)
 ```bash
 pytest -v
 ```
@@ -110,13 +146,18 @@ pytest -v
 python3 scripts/tamper_demo.py
 ```
 
-### 4. Measure Real-Data Coverage Across 10,000 Records
+### 4. Export External Merkle Head Anchor
+```bash
+python3 ulpf.py anchor --output storage/external_head_anchor.json
+```
+
+### 5. Measure Real-Data Coverage Across 10,000 Records
 ```bash
 python3 tools/fetch_datasets.py
 python3 tools/measure_coverage.py
 ```
 
-### 5. Launch SOC Cyber Dashboard (Judge Interactive Mode)
+### 6. Launch SOC Cyber Dashboard (Judge Interactive Mode)
 ```bash
 ./start_demo.sh
 # Open http://localhost:5173 in your browser
@@ -124,11 +165,20 @@ python3 tools/measure_coverage.py
 
 ---
 
-## 📁 Key Deliverables Index
-- **2-Page Architecture Specification**: [`docs/ARCHITECTURE.pdf`](docs/ARCHITECTURE.pdf) *(Generated via ReportLab)*
-- **5-Slide Presentation Deck**: [`docs/PRESENTATION.pptx`](docs/PRESENTATION.pptx) *(Generated via python-pptx)*
-- **2-Minute Demo Video Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+## 🎥 Demonstration Video & Evaluation Materials
+- **2-Minute Video Walkthrough**: [Demo Video Placeholder - Link to be inserted upon recording]
+- **Video Timing & Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 - **Grand Jury Adversarial Evaluation Guide**: [`docs/EVALUATION-GUIDE.md`](docs/EVALUATION-GUIDE.md)
+- **2-Page Architecture PDF**: [`docs/ARCHITECTURE.pdf`](docs/ARCHITECTURE.pdf)
+- **5-Slide Presentation Deck**: [`docs/PRESENTATION.pptx`](docs/PRESENTATION.pptx)
+
+---
+
+## 📁 Key Deliverables Index
+- **2-Page Architecture Specification**: [`docs/ARCHITECTURE.pdf`](docs/ARCHITECTURE.pdf)
+- **5-Slide Presentation Deck**: [`docs/PRESENTATION.pptx`](docs/PRESENTATION.pptx)
+- **2-Minute Demo Video Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- **Air-Gapped Deployment Manual**: [`docs/AIRGAP.md`](docs/AIRGAP.md)
 - **Empirical Datasets & Miss Analysis**: [`docs/DATASETS.md`](docs/DATASETS.md)
 - **High-Throughput Scaling Architecture**: [`docs/SCALING.md`](docs/SCALING.md)
 - **Integration Sinks & Parquet Contract**: [`docs/SINKS.md`](docs/SINKS.md)

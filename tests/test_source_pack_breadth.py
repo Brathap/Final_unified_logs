@@ -130,3 +130,29 @@ def test_generic_leef_pack():
     assert ocsf["src_endpoint"]["ip"] == "198.51.100.99"
     assert ocsf["dst_endpoint"]["ip"] == "10.0.0.1"
     assert ocsf["activity_name"] == "blocked"
+
+
+def test_hdfs_cluster_file_system_activity_class_1001():
+    raw = "081109 203615 148 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_38865049064139660 terminating"
+    routed = REGISTRY.route_and_parse(raw)
+    assert routed is not None
+    pack, extracted, ocsf = routed
+    assert pack.vendor == "Apache"
+    assert pack.product == "Hadoop HDFS"
+    assert ocsf["class_uid"] == 1001
+    assert ocsf["category_name"] == "System Activity"
+    assert ocsf["file"]["name"] == "dfs.DataNode$PacketResponder"
+    assert ocsf["severity"] == "INFO"
+
+
+def test_apache_http_application_activity_class_6001():
+    raw = "[Sun Dec 04 04:47:44 2005] [notice] workerEnv.init() ok /etc/httpd/conf/workers2.properties"
+    routed = REGISTRY.route_and_parse(raw)
+    assert routed is not None
+    pack, extracted, ocsf = routed
+    assert pack.vendor == "Apache"
+    assert pack.product == "HTTP Server"
+    assert ocsf["class_uid"] == 6001
+    assert ocsf["category_name"] == "Application Activity"
+    assert ocsf["severity"] == "notice"
+
