@@ -538,19 +538,21 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   {/* Source Endpoint */}
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <div className="flex items-center space-x-1.5">
-                      <span className={`font-semibold text-xs ${
+                      <span className={`font-semibold text-xs shrink-0 ${
                         isMalicious ? 'text-rose-700 font-bold' : norm?.metadata?.source_type === 'laptop_host' ? 'text-indigo-700 font-bold' : 'text-slate-900'
                       }`}>
                         {norm?.src_endpoint?.ip || '0.0.0.0'}
                       </span>
                       {norm?.src_endpoint?.geo && (
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded border font-sans font-medium flex items-center gap-1 ${
+                        <span 
+                          title={norm.src_endpoint.geo}
+                          className={`text-[10px] px-1.5 py-0.2 rounded border font-sans font-medium flex items-center gap-1 max-w-[130px] truncate ${
                           norm?.metadata?.source_type === 'laptop_host'
                             ? 'bg-indigo-50 text-indigo-750 border-indigo-200 font-bold'
                             : 'bg-slate-100 text-slate-700 border border-slate-200'
                         }`}>
-                          {norm?.metadata?.source_type === 'laptop_host' && <Laptop className="w-2.5 h-2.5 text-indigo-600" />}
-                          {norm.src_endpoint.geo}
+                          {norm?.metadata?.source_type === 'laptop_host' && <Laptop className="w-2.5 h-2.5 text-indigo-600 shrink-0" />}
+                          <span className="truncate">{norm.src_endpoint.geo}</span>
                         </span>
                       )}
                     </div>
@@ -559,9 +561,14 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   {/* Target Destination */}
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <div className="text-slate-800 text-xs flex items-center space-x-1">
-                      <span>{norm?.dst_endpoint?.ip || '10.0.0.1'}</span>
+                      <span className="shrink-0">{norm?.dst_endpoint?.ip || '10.0.0.1'}</span>
                       {norm?.dst_endpoint?.geo && (
-                        <span className="text-[10px] text-slate-500 font-sans">[{norm.dst_endpoint.geo}]</span>
+                        <span 
+                          title={norm.dst_endpoint.geo}
+                          className="text-[10px] text-slate-500 font-sans max-w-[100px] truncate"
+                        >
+                          [{norm.dst_endpoint.geo}]
+                        </span>
                       )}
                     </div>
                   </td>
