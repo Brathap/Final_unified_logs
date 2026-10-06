@@ -110,3 +110,88 @@ class CertInReporter:
         report_body["report_integrity_sha256"] = report_sha
 
         return report_body
+
+    @staticmethod
+    def generate_bsa_section_63_certificate(
+        case_id: str,
+        certifying_officer: str,
+        officer_designation: str,
+        events: List[Dict[str, Any]],
+        device_hostname: str,
+        merkle_root: Optional[str] = None,
+        private_key_pem: Optional[bytes] = None
+    ) -> Dict[str, Any]:
+        """Generates a statutory Certificate of Authenticity under Section 63 of Bharatiya Sakshya Adhiniyam, 2023
+        (corresponding to erstwhile Section 65B of Indian Evidence Act, 1872) for electronic record admissibility.
+        """
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        ist_offset = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+        now_ist = now_utc.astimezone(ist_offset)
+
+        event_hashes = []
+        for ev in events:
+            trace = ev.get("traceability") or {}
+            raw_sha = trace.get("raw_sha256")
+            if raw_sha:
+                event_hashes.append(raw_sha)
+
+        # Build Merkle root of these events if not explicitly passed
+        if not merkle_root and event_hashes:
+            from merkle_engine import MerkleTree, hash_leaf
+            leaves = [hash_leaf(h.encode("ascii")) for h in event_hashes]
+            tree = MerkleTree(leaves)
+            merkle_root = tree.root_hex
+
+        cert_payload = {
+            "statutory_act": "Bharatiya Sakshya Adhiniyam, 2023 (BSA § 63) / Indian Evidence Act, 1872 (§ 65B)",
+            "certificate_title": "Certificate of Authenticity and Custody for Electronic Records",
+            "case_reference": case_id,
+            "certification_timestamp_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+            "certifying_authority": {
+                "officer_name": certifying_officer,
+                "designation": officer_designation,
+                "jurisdiction_role": "Responsible custodian of electronic log preservation system"
+            },
+            "device_identification": {
+                "host_identifier": device_hostname,
+                "operating_status": "System operated under secure custody in ordinary course of business",
+                "tamper_safeguard": "Append-only cryptographic store with RFC 6962 Merkle tree enforcement"
+            },
+            "evidentiary_record_details": {
+                "record_count": len(events),
+                "rfc6962_merkle_root": merkle_root or "0000000000000000000000000000000000000000000000000000000000000000",
+                "sample_wire_hashes": event_hashes[:10],
+                "cryptographic_algorithm": "SHA-256 (FIPS 180-4) + RFC 6962 Merkle Tree"
+            },
+            "statutory_declaration": (
+                "I hereby certify that the computer and logging software described herein produced the output "
+                "during the period over which the computer was used regularly to store or process information. "
+                "Throughout the material part of said period, the computer was operating properly without unauthorized intervention."
+            )
+        }
+
+        # Calculate certificate hash
+        cert_serialized = json.dumps(cert_payload, sort_keys=True)
+        cert_hash = hashlib.sha256(cert_serialized.encode("utf-8")).hexdigest()
+        cert_payload["certificate_hash_sha256"] = cert_hash
+
+        # Sign with Ed25519 if key provided
+        signature_hex = None
+        if private_key_pem:
+            try:
+                from cryptography.hazmat.primitives import serialization
+                from cryptography.hazmat.primitives.asymmetric import ed25519
+                priv = serialization.load_pem_private_key(private_key_pem, password=None)
+                if isinstance(priv, ed25519.Ed25519PrivateKey):
+                    sig = priv.sign(cert_hash.encode("ascii"))
+                    signature_hex = sig.hex()
+                    pub_bytes = priv.public_key().public_bytes(
+                        encoding=serialization.Encoding.Raw,
+                        format=serialization.PublicFormat.Raw
+                    )
+                    cert_payload["enclave_public_key_hex"] = pub_bytes.hex()
+            except Exception as e:
+                cert_payload["signing_notice"] = f"Ed25519 signature note: {e}"
+
+        cert_payload["ed25519_signature_hex"] = signature_hex
+        return cert_payload

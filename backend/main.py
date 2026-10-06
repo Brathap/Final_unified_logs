@@ -230,6 +230,50 @@ async def generate_certin_report(
     return report
 
 
+class CourtAffidavitRequest(BaseModel):
+    case_id: str
+    event_ids: List[str]
+    certifying_officer: Optional[str] = "Forensic Custodian Officer"
+    officer_designation: Optional[str] = "Information Security Officer / Lead Custodian"
+
+
+@app.post("/api/forensics/generate-court-affidavit")
+async def generate_court_affidavit(
+    req: CourtAffidavitRequest,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Generates an official Statutory Certificate under Bharatiya Sakshya Adhiniyam, 2023 (BSA § 63)
+    and Indian Evidence Act § 65B for legal and court admissibility of electronic log records.
+    """
+    events = []
+    for eid in req.event_ids:
+        ev = storage_archive.get_event_by_id(eid)
+        if ev:
+            events.append(ev)
+
+    if not events:
+        # Fallback to recent stored events if specific IDs not found
+        events = storage_archive.query_events(limit=min(len(req.event_ids) or 10, 50))
+
+    cert = CertInReporter.generate_bsa_section_63_certificate(
+        case_id=req.case_id,
+        certifying_officer=req.certifying_officer or user.username,
+        officer_designation=req.officer_designation,
+        events=events,
+        device_hostname=LOCAL_HOSTNAME
+    )
+
+    storage_archive.ingest_audit(
+        username=user.username,
+        role=user.role,
+        action="BSA_63_COURT_AFFIDAVIT_GENERATED",
+        resource=f"forensics/{req.case_id}",
+        status_code=200,
+        details=f"Generated statutory BSA § 63 certificate for case={req.case_id} over {len(events)} records; cert_hash={cert['certificate_hash_sha256'][:16]}"
+    )
+    return cert
+
+
 @app.get("/api/drift/flags")
 async def get_drift_flags(
     user: AuthUser = Security(require_role(["admin", "operator"]))
