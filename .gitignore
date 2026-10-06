@@ -54,3 +54,4 @@ Thumbs.db
 .vscode/
 .idea/
 realdata/
+dist_offline/
