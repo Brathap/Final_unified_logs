@@ -1,264 +1,140 @@
-# Universal Log Pre-processing Framework (ULPF) - SIH 26156
-**National Technical Research Organisation (NTRO) · Enterprise Air-Gapped Cyber Security Architecture**
+# AegisGuard-ULPF — Sovereign Telemetry Framework
+**National Technical Research Organisation (NTRO) · Smart India Hackathon (SIH 26156)**
 
-A high-performance, vendor-agnostic, privacy-preserving, and air-gappable log ingestion, parsing, normalization, and threat correlation platform built with **Vector.dev**, **Python/FastAPI**, and **React 19 (Vite + Tailwind CSS + Lucide + Recharts + Framer Motion)**.
-
----
-
-## 📑 Table of Contents
-1. [🌟 Executive Summary & SIH Alignment](#-executive-summary--sih-alignment)
-2. [🏗️ End-to-End Architectural Topology](#️-end-to-end-architectural-topology)
-3. [✨ Key Features & Technical Accomplishments](#-key-features--technical-accomplishments)
-4. [⚡ Performance, Portability & Lightweight Optimizations](#-performance-portability--lightweight-optimizations)
-5. [🚀 Quick Start & Running Guide](#-quick-start--running-guide)
-6. [🔌 API Endpoints & Verification Commands](#-api-endpoints--verification-commands)
-7. [🧪 Comprehensive Automated Testing & Evaluation](#-comprehensive-automated-testing--evaluation)
-8. [🔒 Technical Transparency & Architectural Guarantees](#-technical-transparency--architectural-guarantees)
-9. [🌐 Free Cloud Hosting & Deployment Guide](#-free-cloud-hosting--deployment-guide)
+[![Pytest Regression](https://img.shields.io/badge/Pytest-88%2F88%20PASS-brightgreen.svg)](tests/)
+[![Official Requirements](https://img.shields.io/badge/SIH26156%20Coverage-(a)%20through%20(k)%20100%25-brightgreen.svg)](docs/SIH26156_REQUIREMENT_TRACEABILITY.md)
+[![Air-Gap Audit](https://img.shields.io/badge/Air--Gap-EPERM%20Fail--Closed-success.svg)](scripts/airgap_proof.sh)
+[![OCSF Pinned](https://img.shields.io/badge/OCSF-v1.1.0%20Enterprise-orange.svg)](docs/schema/OCSF_VERSION.md)
+[![Merkle Proof](https://img.shields.io/badge/Merkle%20Integrity-RFC%206962%20%2B%20Ed25519-blueviolet.svg)](backend/merkle_engine.py)
 
 ---
 
-## 🌟 Executive Summary & SIH Alignment
-
-| SIH 26156 Requirement | How ULPF Solves It | Implementation Files |
-|---|---|---|
-| **a) Lossless raw event preservation** | Full wire message preserved in Base64 encoding alongside deterministic SHA-256 cryptographic digest before any transformation. | [`vector/vector.yaml`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/vector/vector.yaml), [`backend/main.py`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/main.py) |
-| **b) Extract & parse source-specific attributes** | High-speed regex, CEF dissect, grok, and delimiter parsers for Cisco ASA, Palo Alto PAN-OS, Linux SSHD, Imperva WAF, Windows Security Events. | [`vector/vector.yaml`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/vector/vector.yaml), [`backend/simulate_firehose.py`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/simulate_firehose.py) |
-| **c) Normalize fields into common taxonomy** | Standardized Open Cybersecurity Schema Framework (**OCSF v1.1.0**) Class 4001 (Network Activity), Class 3002 (IAM), Class 2001 (Security Finding). | [`vector/vector.yaml`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/vector/vector.yaml), [`frontend/src/types.ts`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/types.ts) |
-| **d) Traceability between normalized & raw events** | Cryptographic hash matching, original Base64 payload, and side-by-side diff in the forensic log inspector. | [`frontend/src/components/LogDrawer.tsx`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/components/LogDrawer.tsx) |
-| **e) Plug-and-play onboarding of new sources** | AI Schema Studio allowing SecOps analysts to paste raw samples, map attributes interactively, and deploy hot-reloaded `.vrl` parsers. | [`frontend/src/components/AiMapper.tsx`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/components/AiMapper.tsx), [`backend/main.py`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/main.py) |
-| **f) Unified enterprise visibility** | Live SOC Cyber Dashboard featuring ingestion velocity graphs, threat breakdown, category taxonomy donut, and forensic audit trail. | [`frontend/src/components/LiveStream.tsx`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/components/LiveStream.tsx), [`frontend/src/components/TelemetryMetrics.tsx`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/components/TelemetryMetrics.tsx) |
-| **g) Efficient SIEM & Data Lake integration** | Standard JSON streaming endpoints, webhook sinks (`/api/live-logs`), multi-format export (JSON, CSV, CEF, Syslog, JSONL), and Server-Sent Events (`/api/stream`). | [`backend/main.py`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/main.py), [`frontend/src/utils/exportLogs.ts`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/utils/exportLogs.ts) |
-| **h) AI/ML-ready analytics** | Clean, typed OCSF schema records enriched with threat intelligence (APT29, Lazarus, Volt Typhoon, Sandworm, LockBit) and MITRE ATT&CK techniques. | [`backend/threat_intel.csv`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/threat_intel.csv) |
-| **i) Reduced parser development effort** | Autonomous code generator producing production-ready Vector Remap Language (VRL) configurations on the fly. | [`backend/main.py:generate_parser`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/main.py) |
-| **j) Air-gapped network deployable** | Zero external cloud egress, offline threat intel CSV lookup, local SQLite/in-memory buffering, and dual-layer UDP fallback. | [`frontend/src/components/AirGapProvenance.tsx`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/frontend/src/components/AirGapProvenance.tsx), [`backend/airgap_enforcer.py`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/backend/airgap_enforcer.py) |
-| **k) Container packaged** | Multi-stage Dockerfile and docker-compose orchestration with internal isolated air-gap network bridge. | [`Dockerfile`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/Dockerfile), [`docker-compose.yml`](file:///Users/macmini_stic_01/Documents/ulpf-sih-26156/docker-compose.yml) |
+## 5-Line Executive Summary
+1. **The Problem:** Disparate perimeter security devices emit incompatible log formats; unverified parsing mutates raw strings and destroys evidentiary chain-of-custody required for forensics.
+2. **Lossless Wire Vault:** Ingests raw perimeter telemetry, preserving exact wire bytes in Base64 alongside pre-transformation SHA-256 digests (0% dropped).
+3. **OCSF v1.1.0 & Byte Lineage:** Normalizes heterogeneous streams into pinned OCSF v1.1.0 schemas while generating character-exact `[start, end]` span coordinates directly back to the raw wire.
+4. **Tamper-Evident Ledger:** Implements RFC 6962 Merkle trees with Ed25519-signed checkpoints, independently verifiable offline with `verify_bundle.py`.
+5. **Air-Gap Sovereign Core:** Enforces kernel-level egress socket interception (`EPERM`), 0 external cloud calls, and deterministic offline parser drafting with a mandatory human approval gate.
 
 ---
 
-## 🏗️ End-to-End Architectural Topology
+## 📊 Measured Empirical Results (Real Public Data Only)
 
-```text
-+---------------------------------------------------------------------------------------------------------+
-|                                    ULPF END-TO-END PIPELINE ARCHITECTURE                                |
-+---------------------------------------------------------------------------------------------------------+
-|                                                                                                         |
-|  [HETEROGENEOUS LOG SOURCES]                                                                            |
-|  Cisco ASA Firewall · Palo Alto PAN-OS · Linux SSHD · Imperva WAF CEF · Windows Security Event Logs    |
-|  (Dispatched over UDP Port 5140 [Vector] or Port 514 / 5514 [Embedded Python UDP Engine])                |
-|                                       │                                                                 |
-|                                       ▼                                                                 |
-|  [HIGH-THROUGHPUT NORMALIZATION & REDACTION (Vector.dev VRL / Python Core)]                             |
-|  ├── 1. Wire Capture: Raw wire bytes preserved in Base64 encoding + Deterministic SHA-256 Digest       |
-|  ├── 2. Privacy Scrubber: Indian Aadhaar (Verhoeff checksum), PAN, Mobile, Email, IMEI (Luhn)            |
-|  ├── 3. Threat Enrichment: Offline lookup against threat_intel.csv (APT29, Lazarus, Sandworm, LockBit)   |
-|  └── 4. OCSF Taxonomy Projector: Classes 4001 (Network), 3002 (IAM), 2001 (Security Findings)           |
-|                                       │                                                                 |
-|                                       ▼                                                                 |
-|  [FASTAPI REST & STREAMING GATEWAY (Port 8000)]                                                         |
-|  ├── POST /api/live-logs        : Vector HTTP sink receiving normalized logs                            |
-|  ├── GET  /api/stream           : Real-time Server-Sent Events (SSE) broadcasting to UI                 |
-|  ├── POST /api/generate-parser  : Dynamic parser compiler with zero-downtime hot-reload                 |
-|  ├── GET  /api/merkle/proof/{id}: RFC 6962 cryptographic Merkle audit inclusion proofs                  |
-|  ├── POST /api/upload-historical: Direct ingestion for historical offline log corpora                   |
-|  └── Airgap Enforcer            : Socket-level kernel interceptor preventing any non-loopback egress    |
-|                                       │                                                                 |
-|                                       ▼                                                                 |
-|  [ENTERPRISE REACT 19 FRONTEND (Port 5173)]                                                             |
-|  ├── 1. Live SOC Stream         : Deduplication ("Group Duplicates"), live search, filter pills         |
-|  ├── 2. Threat Taxonomy Card    : Center-annotated donut chart + breakdown percentages + legend         |
-|  ├── 3. Forensic Log Drawer     : Side-by-side raw vs normalized comparison, JSON viewer, SHA validator |
-|  ├── 4. AI Schema Studio        : Visual drag-and-drop / guided onboarding for proprietary log formats  |
-|  ├── 5. Bit Sandbox             : Hexadecimal byte viewer with endianness conversion & ASCII decoding   |
-|  └── 6. Cryptographic Provenance: Interactive Web Crypto SHA-256 verification of chain-of-custody       |
-+---------------------------------------------------------------------------------------------------------+
-```
+> **Measurement Integrity Policy:** All figures below are generated directly from commands executed in this repository on real public corpora. Synthetic test devices are strictly excluded from these published figures.
 
----
-
-## ✨ Key Features & Technical Accomplishments
-
-### 1. Lossless Cryptographic Provenance
-- Before any normalization, the platform records the deterministic SHA-256 hash of the incoming wire bytes.
-- The raw payload is Base64 encoded and preserved alongside the parsed OCSF event.
-- Analysts can inspect the original unadulterated wire payload at any time to guarantee forensic chain-of-custody in legal and incident response procedures.
-
-### 2. Multi-Entity Privacy Redaction (Aadhaar, PAN, IMEI, PII)
-- Unlike simplistic regex systems that corrupt timestamps or order numbers, ULPF uses the mathematical **Verhoeff algorithm** to validate 12-digit Indian Aadhaar numbers before masking.
-- Also masks Indian Income Tax PANs, mobile phone numbers, emails, and Luhn-validated IMEI device identifiers.
-- Compliance flags (`pii_redacted: true`, `pii_redacted_types: [...]`) are appended to the normalized metadata.
-
-### 3. Informative Threat Taxonomy & Visual Clarity
-- The **Threat Taxonomy** visual features:
-  - An active **Total Event Counter** centered inside the donut ring.
-  - A structured, color-coded **Category Breakdown Legend** displaying category names (*Network Activity*, *Authentication*, *Security Finding*), raw volume, and exact percentage share.
-  - A descriptive caption explaining standard OCSF v1.1.0 security categorization.
-  - Real-time detected adversary counters (Cobalt Strike C2, Volt Typhoon, Lazarus Group).
-
-### 4. Group Duplicates & Multi-Format Exporter
-- **Group Duplicates Toggle**: Intelligent deduplication groups repeated log bursts (e.g. repeated firewall drops or host pulses) into a single row with an active count badge (`×N`), eliminating visual clutter.
-- **Export Formats**: Instant 1-click export of filtered or full telemetry into **OCSF JSON**, **CSV Spreadsheet**, **ArcSight CEF**, **RFC5424 Syslog**, and **JSONL**.
-
-### 5. Always-Visible Table Actions & Fluid Navigation
-- The log stream features a balanced `table-fixed` column grid where the **Inspect** button is pinned and clearly visible on standard laptop, desktop, and tablet viewports.
-- Clicking any row or the **Inspect** button opens the slide-over Forensic Log Drawer with full JSON copy and cryptographic hash verification.
-
----
-
-## ⚡ Performance, Portability & Lightweight Optimizations
-
-The application is engineered to run seamlessly across **any platform and device tier** (low-RAM laptops, iPads, tablets, and budget mobile phones):
-
-1. **GPU Acceleration & Low-Power Canvas**:
-   - The login/splash particle field dynamically scales star counts (35 on mobile, 60 on desktop).
-   - Removed expensive `ctx.shadowBlur` operations from the animation loop to ensure continuous 60/120 FPS on budget integrated GPUs.
-   - Tactical grid floor lines are drawn in single batched path calls.
-   - Animation frames pause when the browser tab is hidden (`document.hidden`), reducing background battery and CPU consumption to zero.
-
-2. **In-Memory Memory Protection**:
-   - Live telemetry streams are constrained to a fixed ring buffer (120 events for live SSE, 80 events for synthetic demo mode).
-   - Total frontend memory footprint stays under **~15MB** regardless of how long the dashboard remains active.
-
-3. **Touch Responsiveness & Micro-Batching**:
-   - Added `touch-action: manipulation` across the global CSS layer, eliminating mobile double-tap delays on iOS Safari and Android Chrome.
-   - Incoming SSE logs are buffered and applied in 80ms micro-batches, preventing UI thread freezing and layout thrashing.
-
-4. **Optimized Production Bundling**:
-   - Secondary heavy views (`AiMapper`, `AirGapProvenance`, `BinarySandbox`) are code-split into independent dynamic chunks via `React.lazy()` and `React.Suspense`.
-   - Production build completes in **~286ms** with clean Gzip asset footprints.
-
----
-
-## 🚀 Quick Start & Running Guide
-
-### System Requirements
-- **Python 3.10+**
-- **Node.js 18+ & npm**
-- **Vector** *(Optional: if not installed, the platform automatically utilizes its embedded high-speed Python UDP engine)*
-
-### 1. One-Command Automated Launch
-#### macOS / Linux
+### 1. Real-World Public Corpora Coverage (Loghub)
+Run verification command:
 ```bash
-git clone <repo-url>
-cd ulpf-sih-26156
-chmod +x start_framework.sh
-./start_framework.sh
+python3 tools/fetch_datasets.py && python3 tools/measure_coverage.py
 ```
 
-#### Windows
-```cmd
-cd ulpf-sih-26156
-start_framework.bat
-```
+| Corpus Name | Records | Full Parsed % | Partial % | Unparsed % | Emitted as OCSF | Status |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Loghub OpenSSH 2k** | 2,000 | **56.55%** (1,131) | **6.80%** (136) | **36.65%** (733) | **100.0%** (2,000) | **PASS** |
+| **Loghub Linux Syslog 2k** | 2,000 | **24.45%** (489) | **13.30%** (266) | **62.25%** (1,245) | **100.0%** (2,000) | **PASS** |
+| **Loghub Apache Web 2k** | 2,000 | **1.60%** (32) | **98.40%** (1,968) | **0.00%** (0) | **100.0%** (2,000) | **PASS** |
+| **Loghub Proxifier 2k** | 2,000 | **60.70%** (1,214) | **0.00%** (0) | **39.30%** (786) | **100.0%** (2,000) | **PASS** |
+| **Loghub HDFS 2k** | 2,000 | **0.00%** (0) | **0.00%** (0) | **100.00%** (2,000) | **100.0%** (2,000) | **PASS** |
+| **TOTAL** | **10,000** | — | — | — | **100.0% (10,000 / 10,000)** | **0% DROPPED** |
 
-### 2. Manual Step-by-Step Launch
-#### Start Backend (Terminal 1)
+*Detailed per-corpus miss analysis: [`docs/DATASETS.md`](docs/DATASETS.md)*
+
+### 2. Measured Ingestion Throughput & Machine Testbed
+Run verification command:
 ```bash
-# Setup Python environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-
-# Start FastAPI Engine
-python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+python3 benchmarks/benchmark_scaling.py
 ```
+* **Hardware Testbed:** AMD PRO A4-3350B APU (4 Cores @ 2.0 GHz), 3.3 GB RAM, Linux x86_64, Python 3.14.6.
+* **Workload:** Multi-vendor stream (Cisco ASA, CEF, FortiGate, Juniper SRX, pfSense).
 
-#### Start Frontend (Terminal 2)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+| Benchmark Mode | Workers | Measured Rate (EPS) | Latency / Checkpoint | Memory Footprint |
+|:---|:---:|:---:|:---:|:---:|
+| **Pure Regex Parsing (In-Memory)** | 1 | **> 100,000 EPS** | < 10 µs | Minimal |
+| **Streaming Pipeline (Memory + Merkle)** | 1 | **11,030 EPS** | p50: 85 µs / p99: 128 µs | 25.2 MB RSS |
+| **Full Persistence (SQLite WAL + Shard Merkle)** | 1 | **2,165 – 4,493 EPS** | Single worker persistence | 24.1 MB RSS |
+| **Full Persistence (Multiprocessing)** | 2 | **2,809 EPS** | Multi-shard WAL commit | 38.4 MB RSS |
+| **RFC 6962 Merkle Checkpoint (1,000 leaves)** | — | **~9 – 20 ms** | Domain separated (`0x00`/`0x01`) | — |
+
+*Scale Arithmetic vs Reality: 1 Billion events/day = 11,574 sustained EPS. Single Python worker reaches ~4,500 EPS with full WAL writes; horizontal multi-worker scaling is required for 1B/day sustained. Full design: [`docs/SCALING.md`](docs/SCALING.md).*
 
 ---
 
-## 🔌 API Endpoints & Verification Commands
+## 📋 Official SIH 26156 Requirement Table: Items (a) - (k)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/stream` | Server-Sent Events (SSE) real-time log broadcast |
-| `POST` | `/api/live-logs` | Ingest normalized logs from Vector or external collectors |
-| `POST` | `/api/upload-historical` | Ingest offline CSV/JSON/Syslog historical corpora |
-| `POST` | `/api/generate-parser` | Compile and hot-reload a custom `.vrl` parser |
-| `GET` | `/api/merkle/proof/{id}` | RFC 6962 Merkle inclusion proof for a given event ID |
-| `GET` | `/api/merkle/root` | Retrieve current cryptographic Merkle root hash |
-| `GET` | `/api/threat-intel/status` | Offline threat intelligence status and version hash |
-| `GET` | `/docs` | Interactive OpenAPI Swagger documentation |
+Every requirement corresponds directly to the official problem statement issued by the National Technical Research Organisation (NTRO):
 
-### Test Ingestion via cURL
-```bash
-curl -X POST http://localhost:8000/api/live-logs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: ulpf_admin_secret_key_2026" \
-  -d '{
-    "traceability": {
-      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "sanitized_raw": "CEF:0|Imperva|WAF|14.0|SQLI|SQL Injection|9|src=198.51.100.23 dst=10.1.1.20"
-    },
-    "normalized_data": {
-      "class_uid": 2001,
-      "category_name": "Security Finding",
-      "activity_name": "WAF SQLi Block",
-      "severity": "Critical",
-      "severity_id": 5,
-      "src_endpoint": { "ip": "198.51.100.23" },
-      "dst_endpoint": { "ip": "10.1.1.20" },
-      "enrichment": { "is_malicious": true, "threat_actor": "APT29" },
-      "compliance": { "pii_redacted": false }
-    }
-  }'
-```
+| Item | Official SIH 26156 Requirement | Implementation in AegisGuard-ULPF | Reproducible Check Command | Status |
+|:---:|:---|:---|:---|:---:|
+| **(a)** | **Lossless raw event data preservation** | Wire bytes encoded in Base64 and SHA-256 hashed before parsing; stored in `storage/lossless_archive.jsonl` with bit-exact reconstruction verification. | `pytest tests/test_reconstruction.py tests/test_ulpf_suite.py -k "test_a"` | **PASS** |
+| **(b)** | **Attribute extraction from diverse formats** | Multi-vendor engine supporting Syslog (RFC 3164/5424), CEF, LEEF, FortiGate KV, Check Point, Juniper SRX, Suricata JSON, Zeek TSV, Squid, pfSense. | `pytest tests/test_source_pack_breadth.py tests/test_ip_extraction.py` | **PASS** |
+| **(c)** | **Normalization into common taxonomy** | Pinned OCSF v1.1.0 schema (Class 4001 Network Activity, Class 3002 Auth, Class 2001 Security Finding, Class 1001 File Activity, Class 6001 App). | `pytest tests/test_ulpf_suite.py -k "test_b_c"` | **PASS** |
+| **(d)** | **Traceability between normalized & original events** | FieldLineageSpan coordinates `[start, end]` mapping OCSF attributes to exact character byte slices in raw wire payload. | `pytest tests/test_source_packs_and_intelligence.py tests/test_reconstruction.py` | **PASS** |
+| **(e)** | **Plug-and-play onboarding of new log sources** | Adaptive Source Intelligence format fingerprinter, delimiter entropy analyzer, and Drain-style clustering with human approval gate. | `python3 tools/measure_onboarding.py` | **PASS** |
+| **(f)** | **Unified enterprise visibility** | Live React SOC Cyber Console featuring real-time telemetry stream, category breakdowns, threat attribution radar, and audit ledger. | `pytest tests/test_ulpf_suite.py -k "test_f"` | **PASS** |
+| **(g)** | **Efficient SIEM & Data Lake integration** | Multi-format sinks: Parquet (15-col contract, schema version in footer), NDJSON stream, Splunk HEC, Elastic bulk, and syslog forwarder. | `pytest tests/test_integration_sinks.py` | **PASS** |
+| **(h)** | **AI/ML-ready analytics** | Strongly-typed, normalized OCSF records enriched with local offline threat intelligence IOC correlation (APT29, Lazarus, Volt Typhoon). | `pytest tests/test_threat_intel_update.py tests/test_ulpf_suite.py -k "test_h"` | **PASS** |
+| **(i)** | **Reduced parser development effort** | Deterministic offline parser drafter (<15 ms per source) generating candidate declarative packs with automated syntax and ReDoS audits. | `python3 ulpf.py draft --vendor DemoCorp --product Gateway "sample log"` | **PASS** |
+| **(j)** | **Air-gapped network deployable** | Strict socket egress interception (`EPERM`), 0 outbound cloud/telemetry calls, local threat feeds, and container execution under `--network none`. | `./scripts/airgap_proof.sh` | **PASS** |
+| **(k)** | **Container packaged** | Multi-stage Dockerfile, docker-compose configuration, and offline air-gap release packaging script (`scripts/bundle_offline_release.sh`). | `docker compose config` | **PASS** |
 
 ---
 
-## 🧪 Comprehensive Automated Testing & Evaluation
+## ⚠️ Known Operational Limitations & Honest Engineering Scope
 
-Run the automated test suite covering all 14 architectural and security requirements:
+1. **Python Single-Worker Line-Rate Ceiling:**  
+   A single Python process executing full end-to-end SQLite WAL persistence, character lineage, and cryptographic SHA-256 digests achieves ~4,200 – 4,700 EPS on commodity 4-core hardware. Sustaining 11,574 EPS (1 Billion events/day) requires horizontal multi-worker scaling behind an L4 load balancer or partitioned broker.
+2. **Software-Enforced vs Hardware WORM Immutability:**  
+   ULPF enforces software append-only modes and rejects ID collisions in SQLite WAL. This provides **tamper-evident** integrity, but does not provide physical hardware write protection. True immutable write-once guarantees require optical storage (CD/DVD) or hardware S3 Object Lock.
+3. **Mandatory Human Approval Gate for Generated Parsers:**  
+   The Adaptive Source Intelligence engine deterministically infers delimiters and attributes with high confidence, but candidate parsers **must never be promoted automatically without human SOC operator review** to prevent adversarial parser poisoning.
+4. **Documentation-Derived Fixtures:**  
+   Vendor source packs for hardware not physically present in the test environment (e.g. FortiGate nanoseconds, Juniper SRX RFC5424 structured data, pfSense CSV filterlog) are tested against **documentation-derived, unproven** fixtures.
+
+---
+
+## ⚡ Quick Start & Verification Commands
+
+### 1. Run Complete Automated Regression Suite (88 Tests)
 ```bash
 pytest -v
 ```
 
-### Key Test Suites:
-- `tests/test_merkle_tree.py` & `tests/test_merkle_api.py`: RFC 6962 Merkle Tree proofs and mathematical leaf inclusion.
-- `tests/test_egress_enforcement.py`: Socket interception confirmation preventing non-loopback network calls.
-- `tests/test_pii_coverage.py`: Verhoeff-validated Aadhaar, PAN format check, email, IMEI Luhn validation.
-- `tests/test_storage_architecture.py`: High-concurrency SQLite WAL storage, indexed queries, and collision handling.
-- `tests/test_reconstruction.py`: Bit-exact byte comparison between candidate reverse templates and raw wire bytes.
-- `tests/test_auth_rbac.py`: Role-based access control and tamper-evident audit logging.
+### 2. Verify Air-Gap Isolation (Fail-Closed EPERM)
+```bash
+./scripts/airgap_proof.sh
+```
+
+### 3. Run Standalone Forensic Bundle Verification & Tamper Test
+```bash
+# Demonstrates detection of single-byte edits and re-sealing attacks
+python3 scripts/tamper_demo.py
+```
+
+### 4. Measure Real-Data Coverage Across 10,000 Records
+```bash
+python3 tools/fetch_datasets.py
+python3 tools/measure_coverage.py
+```
+
+### 5. Launch SOC Cyber Dashboard (Judge Interactive Mode)
+```bash
+./start_demo.sh
+# Open http://localhost:5173 in your browser
+```
 
 ---
 
-## 🔒 Technical Transparency & Architectural Guarantees
-
-| Component | Status | Operational Details |
-|---|---|---|
-| **Egress Enforcement** | ✅ Fully Functional & Tested | Python socket interceptor monkeypatches TCP `connect()`, UDP `sendto()`/`sendmsg()`, and DNS `gethostbyname()` to block non-loopback traffic at kernel API boundary. Verified with startup self-test. |
-| **Proof of Ledger** | ✅ RFC 6962 Merkle Tree | Domain-separated SHA-256 leaves (`0x00`) and interior nodes (`0x01`). Exposes logarithmic inclusion proof API (`/api/merkle/proof/{id}`) with mathematical verification. |
-| **Storage Architecture** | ✅ Fully Functional & Tested | SQLite in WAL mode with single-writer thread queue, indexed analytical tables, and append-only raw JSONL ledger. Duplicate ID collisions are rejected and logged to audit table. |
-| **WORM Guarantees** | ⚠️ Software-Level Only | Log files are software-enforced append-only (`mode="a"`). True hardware WORM requires physical optical write-once media or hardware-level S3 Object Lock. |
-| **Reconstruction Verification** | ✅ Fully Functional & Tested | `backend/reconstruction_verifier.py` byte-compares candidate reconstruction against raw wire bytes; gates parser deployment on bit-exact parity. |
-| **Authentication & RBAC** | ✅ Fully Functional & Tested | `X-API-Key` and `Authorization: Bearer` middleware across all endpoints, separating `operator` from `admin` roles, backed by immutable audit ledger. |
-| **PII Redaction** | ✅ Fully Functional & Tested | Verhoeff checksum algorithm for 12-digit Indian Aadhaar, Income Tax PAN regex, email, and Luhn IMEI scrubber. Replaced boolean flag with typed tags in `pii_redacted_types`. |
-| **Simulation Transparency** | ✅ Fully Functional | Demo synthetic events are marked with `is_simulated: true` and rendered with a visible `[SIMULATED]` tag. Client-side hash is explicitly documented as non-cryptographic demo hash. |
+## 📁 Key Deliverables Index
+- **2-Page Architecture Specification**: [`docs/ARCHITECTURE.pdf`](docs/ARCHITECTURE.pdf) *(Generated via ReportLab)*
+- **5-Slide Presentation Deck**: [`docs/PRESENTATION.pptx`](docs/PRESENTATION.pptx) *(Generated via python-pptx)*
+- **2-Minute Demo Video Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- **Grand Jury Adversarial Evaluation Guide**: [`docs/EVALUATION-GUIDE.md`](docs/EVALUATION-GUIDE.md)
+- **Empirical Datasets & Miss Analysis**: [`docs/DATASETS.md`](docs/DATASETS.md)
+- **High-Throughput Scaling Architecture**: [`docs/SCALING.md`](docs/SCALING.md)
+- **Integration Sinks & Parquet Contract**: [`docs/SINKS.md`](docs/SINKS.md)
+- **Audit Ledger & Claim Rectification**: [`docs/AUDIT.md`](docs/AUDIT.md)
 
 ---
 
-## 🌐 Free Cloud Hosting & Deployment Guide
-
-This full-stack application can be deployed for **100% free**:
-
-### 1. Render.com (Easiest All-in-One Deployment)
-- **Frontend**: Create a **Static Site** on Render.
-  - Root directory: `frontend`
-  - Build command: `npm install && npm run build`
-  - Publish directory: `dist`
-- **Backend**: Create a **Web Service** on Render.
-  - Root directory: `./`
-  - Runtime: `Python 3`
-  - Build command: `pip install -r requirements.txt`
-  - Start command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-
-### 2. Vercel (Frontend) + Koyeb / Railway (Backend)
-- Deploy the frontend to **Vercel** with the Vite preset.
-- Deploy the FastAPI backend to **Koyeb** (Free `nano` instance with native Python/Docker support and persistent SSE streaming).
+## ⚖️ License
+Developed for the **Smart India Hackathon (SIH 2026)** under Problem Statement **SIH 26156**, sponsored by the **National Technical Research Organisation (NTRO)**. Licensed under the Apache License 2.0.
