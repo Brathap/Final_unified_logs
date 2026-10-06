@@ -65,11 +65,20 @@ export const App: React.FC = () => {
   // Filter Mode state: default 'all' so all enterprise security events are immediately visible
   const [filterMode, setFilterMode] = useState<'all' | 'laptop' | 'threats' | 'pii' | 'blocks'>('all');
   
-  // Instant Demo Mode Toggle (enabled by default so telemetry velocities and stream actively demonstrate)
   const [instantDemoMode, setInstantDemoMode] = useState(true);
   const [eps, setEps] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logCountRef = useRef(0);
+  const instantDemoModeRef = useRef(instantDemoMode);
+  const hostStreamingRef = useRef(hostStreaming);
+
+  useEffect(() => {
+    instantDemoModeRef.current = instantDemoMode;
+  }, [instantDemoMode]);
+
+  useEffect(() => {
+    hostStreamingRef.current = hostStreaming;
+  }, [hostStreaming]);
 
   // Initialize: do not fabricate synthetic logs by default. Real logs stream from backend.
   useEffect(() => {
@@ -166,6 +175,22 @@ export const App: React.FC = () => {
         try {
           const record: ULPFLogRecord = JSON.parse(event.data);
           record.id = record.id || `live-${Date.now()}-${Math.random()}`;
+
+          // If both Demo Mode and Laptop Logs are turned OFF, do not append any new logs
+          const isLaptopLog = record?.normalized_data?.metadata?.source_type === 'laptop_host';
+          const isDemoActive = instantDemoModeRef.current;
+          const isHostActive = hostStreamingRef.current;
+
+          if (!isDemoActive && !isHostActive) {
+            return;
+          }
+          if (!isDemoActive && !isLaptopLog) {
+            return;
+          }
+          if (!isHostActive && isLaptopLog) {
+            return;
+          }
+
           pendingQueue.unshift(record);
           logCountRef.current += 1;
 
@@ -195,12 +220,17 @@ export const App: React.FC = () => {
   // 3. Real-Time EPS Counter
   useEffect(() => {
     const interval = setInterval(() => {
-      setEps(Math.max(instantDemoMode ? 8 : 1, logCountRef.current));
+      const isAnyActive = instantDemoMode || hostStreaming;
+      if (!isAnyActive) {
+        setEps(0);
+      } else {
+        setEps(Math.max(instantDemoMode ? 8 : 1, logCountRef.current));
+      }
       logCountRef.current = 0;
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [instantDemoMode]);
+  }, [instantDemoMode, hostStreaming]);
 
   return (
     <>
