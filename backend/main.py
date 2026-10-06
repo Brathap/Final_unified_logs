@@ -288,7 +288,7 @@ async def verify_event_merkle_proof(
     }
 
 
-@app.get("/")
+@app.get("/api/status")
 def read_root():
     return {
         "status": "online",
@@ -1602,20 +1602,18 @@ if os.path.exists(FRONTEND_DIST):
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if full_path and os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
-        # Return JSON status for API clients, health checks, or test suites (Accept: */* or application/json without text/html)
+        # Return JSON status only if explicitly requesting json or not a browser
         accept = request.headers.get("accept", "")
-        if full_path == "" and "text/html" not in accept:
-            return {
-                "status": "online",
-                "service": "ULPF Enterprise Stream Server",
-                "version": "2.0.0",
-                "active_subscribers": len(subscribers),
-                "threat_intel_entries": len(THREAT_INTEL),
-            }
         index_file = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
-        raise HTTPException(status_code=404, detail="Frontend assets not found.")
+        return {
+            "status": "online",
+            "service": "ULPF Enterprise Stream Server",
+            "version": "2.0.0",
+            "active_subscribers": len(subscribers),
+            "threat_intel_entries": len(THREAT_INTEL),
+        }
 
 
 
