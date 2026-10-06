@@ -1452,11 +1452,20 @@ def get_host_stream_status(user: AuthUser = Security(require_role(["admin", "ope
 @app.post("/api/host-stream/toggle")
 async def toggle_host_stream(
     request: Request,
-    user: AuthUser = Security(require_role(["admin"]))
+    user: AuthUser = Security(require_role(["admin", "operator"]))
 ):
-    """Enable or disable streaming laptop logs to dashboard (Admin Only)."""
+    """Enable or disable streaming laptop logs to dashboard (Admin & Operator)."""
     global HOST_LOGS_ACTIVE, current_journal_proc
-    HOST_LOGS_ACTIVE = not HOST_LOGS_ACTIVE
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+
+    if body and isinstance(body, dict) and "active" in body and isinstance(body["active"], bool):
+        HOST_LOGS_ACTIVE = body["active"]
+    else:
+        HOST_LOGS_ACTIVE = not HOST_LOGS_ACTIVE
+
     action_str = "RESUME_HOST_STREAM" if HOST_LOGS_ACTIVE else "PAUSE_HOST_STREAM"
     storage_archive.ingest_audit(user.username, user.role, action_str, "host-stream", 200, f"Host stream set to {HOST_LOGS_ACTIVE}")
     
@@ -1485,7 +1494,16 @@ async def toggle_enterprise_stream(
 ):
     """Enable or disable streaming enterprise background wire logs (Admin / Operator)."""
     global ENTERPRISE_STREAM_ACTIVE
-    ENTERPRISE_STREAM_ACTIVE = not ENTERPRISE_STREAM_ACTIVE
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+
+    if body and isinstance(body, dict) and "active" in body and isinstance(body["active"], bool):
+        ENTERPRISE_STREAM_ACTIVE = body["active"]
+    else:
+        ENTERPRISE_STREAM_ACTIVE = not ENTERPRISE_STREAM_ACTIVE
+
     return {
         "active": ENTERPRISE_STREAM_ACTIVE,
         "message": f"Enterprise wire stream {'resumed' if ENTERPRISE_STREAM_ACTIVE else 'paused'}",

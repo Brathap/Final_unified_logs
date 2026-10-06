@@ -114,7 +114,11 @@ export const App: React.FC = () => {
       setFilterMode('all');
     }
     try {
-      const res = await secureFetch('/api/host-stream/toggle', { method: 'POST' });
+      const res = await secureFetch('/api/host-stream/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: nextState })
+      });
       const data = await res.json();
       if (typeof data.active === 'boolean') {
         setHostStreaming(data.active);
@@ -132,7 +136,11 @@ export const App: React.FC = () => {
       setFilterMode('all');
     }
     // Also sync with backend enterprise wire stream
-    secureFetch('/api/enterprise-stream/toggle', { method: 'POST' }).catch(() => {});
+    secureFetch('/api/enterprise-stream/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: nextDemo })
+    }).catch(() => {});
   };
 
   // 1. Instant Demo Mode Generator (Lightweight, non-blocking 1400ms cadence, throttled when tab hidden)
@@ -149,20 +157,9 @@ export const App: React.FC = () => {
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
 
-  // 2. Real SSE Stream from FastAPI Backend (Instant, fluid ingestion)
+  // 2. Real SSE Stream from FastAPI Backend (Instant, zero-latency ingestion)
   useEffect(() => {
     let eventSource: EventSource | null = null;
-    let animFrameId: number | null = null;
-    let pendingQueue: ULPFLogRecord[] = [];
-
-    const flushQueue = () => {
-      if (pendingQueue.length > 0) {
-        const nextBatch = [...pendingQueue];
-        pendingQueue = [];
-        setLogs(prev => [...nextBatch, ...prev].slice(0, 60));
-      }
-      animFrameId = null;
-    };
 
     const connectSSE = () => {
       eventSource = new EventSource(getAuthenticatedUrl('/api/stream'));
@@ -173,17 +170,21 @@ export const App: React.FC = () => {
 
       eventSource.addEventListener('log', (event: MessageEvent) => {
         try {
-          const record: ULPFLogRecord = JSON.parse(event.data);
-          record.id = record.id || `live-${Date.now()}-${Math.random()}`;
-
-          // If both Demo Mode and Laptop Logs are turned OFF, do not append any new logs
-          const isLaptopLog = record?.normalized_data?.metadata?.source_type === 'laptop_host';
           const isDemoActive = instantDemoModeRef.current;
           const isHostActive = hostStreamingRef.current;
 
           if (!isDemoActive && !isHostActive) {
             return;
           }
+
+          const record: ULPFLogRecord = JSON.parse(event.data);
+          record.id = record.id || `live-${Date.now()}-${Math.random()}`;
+
+          // Robust check for laptop host log
+          const isLaptopLog = 
+            record?.normalized_data?.metadata?.source_type === 'laptop_host' ||
+            (record?.traceability?.sanitized_raw || '').startsWith('[HOST:');
+
           if (!isDemoActive && !isLaptopLog) {
             return;
           }
@@ -191,12 +192,9 @@ export const App: React.FC = () => {
             return;
           }
 
-          pendingQueue.unshift(record);
+          // Prepend directly so laptop and live events render without frame-delay
+          setLogs(prev => [record, ...prev].slice(0, 60));
           logCountRef.current += 1;
-
-          if (!animFrameId) {
-            animFrameId = requestAnimationFrame(flushQueue);
-          }
         } catch (e) {
           console.error("Error parsing live SSE event", e);
         }
@@ -212,7 +210,6 @@ export const App: React.FC = () => {
     connectSSE();
 
     return () => {
-      if (animFrameId) cancelAnimationFrame(animFrameId);
       if (eventSource) eventSource.close();
     };
   }, []);
