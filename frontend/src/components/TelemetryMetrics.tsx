@@ -32,7 +32,7 @@ interface TelemetryMetricsProps {
 // Cohesive Monochromatic Cyber Cyan & Blue Palette (No harsh rainbow colors)
 const TAXONOMY_COLORS = ['#22d3ee', '#0ea5e9', '#38bdf8', '#0284c7', '#0369a1', '#67e8f9'];
 
-export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({ 
+const TelemetryMetricsComponent: React.FC<TelemetryMetricsProps> = ({ 
   logs, 
   throughput,
   hostStreaming: _hostStreaming = false,
@@ -423,3 +423,5 @@ export const TelemetryMetrics: React.FC<TelemetryMetricsProps> = ({
     </div>
   );
 };
+
+export const TelemetryMetrics = React.memo(TelemetryMetricsComponent);

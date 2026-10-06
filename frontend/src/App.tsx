@@ -124,16 +124,16 @@ export const App: React.FC = () => {
     }
   };
 
-  // 1. Instant Demo Mode Generator (Smooth, non-blocking 800ms cadence, throttled when tab hidden)
+  // 1. Instant Demo Mode Generator (Lightweight, non-blocking 1400ms cadence, throttled when tab hidden)
   useEffect(() => {
     if (!instantDemoMode) return;
 
     const demoInterval = setInterval(() => {
       if (document.hidden) return; // Prevent background CPU/memory consumption
       const newLog = generateSyntheticLog(false);
-      setLogs(prev => [newLog, ...prev.slice(0, 79)]);
+      setLogs(prev => [newLog, ...prev.slice(0, 49)]);
       logCountRef.current += 1;
-    }, 850);
+    }, 1400);
 
     return () => clearInterval(demoInterval);
   }, [instantDemoMode]);
@@ -148,7 +148,7 @@ export const App: React.FC = () => {
       if (pendingBatch.length > 0) {
         const batchToApply = [...pendingBatch];
         pendingBatch = [];
-        setLogs(prev => [...batchToApply, ...prev].slice(0, 120));
+        setLogs(prev => [...batchToApply, ...prev].slice(0, 60));
       }
     };
 
@@ -170,7 +170,7 @@ export const App: React.FC = () => {
             flushTimer = setTimeout(() => {
               flushTimer = null;
               flushLogs();
-            }, 80); // Ultra-responsive 80ms batch interval avoids freezing DOM
+            }, 250); // 250ms batching prevents UI freezing and micro-stutter
           }
         } catch (e) {
           console.error("Error parsing live SSE event", e);
