@@ -123,6 +123,13 @@ export const App: React.FC = () => {
       if (typeof data.active === 'boolean') {
         setHostStreaming(data.active);
       }
+      if (nextState && Array.isArray(data.initial_logs) && data.initial_logs.length > 0) {
+        setLogs(prev => {
+          const existingIds = new Set(prev.map(l => l.id));
+          const newEntries = data.initial_logs.filter((l: any) => !existingIds.has(l.id));
+          return [...newEntries, ...prev].slice(0, 60);
+        });
+      }
     } catch (e) {
       console.warn("Toggle sync fallback", e);
     }

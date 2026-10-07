@@ -15,6 +15,7 @@ import asyncio
 import base64
 import csv
 import datetime
+import glob
 import hashlib
 import io
 import json
@@ -1048,7 +1049,7 @@ async def process_and_broadcast(raw_msg: str, source_type: str = "syslog_network
                 "vendor_name": vendor_label,
                 "name": product_label,
             },
-            "source_type": extraction_meta.get("source_type") or source_type,
+            "source_type": source_type if source_type == "laptop_host" else (extraction_meta.get("source_type") or source_type),
             "wire_format": detected_format,
         },
         "class_uid": ocsf_class_uid,
@@ -1173,26 +1174,44 @@ async def host_telemetry_heartbeat():
                 await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {msg}", source_type="laptop_host")
         except Exception as e:
             print(f"[ULPF HOST TELEMETRY ERROR] {e}")
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(1.5)
 
 
-async def send_initial_laptop_logs(count: int = 15):
-    """Fetches and broadcasts the most recent real system logs across Linux, macOS, and Windows."""
-    # 1. Try Linux systemd journalctl
+async def send_initial_laptop_logs(count: int = 15) -> List[Dict[str, Any]]:
+    """Fetches, broadcasts, and returns the most recent real system logs across Linux, macOS, and Windows."""
+    records_emitted: List[Dict[str, Any]] = []
+
+    # 1. Try Linux systemd journalctl with instant active journal targeting and strict timeout
     if os.path.exists("/bin/journalctl") or os.path.exists("/usr/bin/journalctl"):
         try:
+            # Check for direct active journal files first (instant <20ms query vs 20s scan)
+            active_journals = sorted([f for f in glob.glob("/var/log/journal/*/*.journal") if "@" not in os.path.basename(f)])
+            cmd = ["journalctl"]
+            if active_journals:
+                for jf in active_journals:
+                    cmd.append(f"--file={jf}")
+            cmd.extend(["--no-pager", "-n", str(count)])
+
             proc_init = await asyncio.create_subprocess_exec(
-                "journalctl", "--no-pager", "-n", str(count),
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL
             )
-            out, _ = await proc_init.communicate()
-            if out:
-                for line in out.decode("utf-8", errors="ignore").splitlines():
-                    line = line.strip()
-                    if line:
-                        await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
-                return
+            try:
+                out, _ = await asyncio.wait_for(proc_init.communicate(), timeout=0.8)
+                if out:
+                    for line in out.decode("utf-8", errors="ignore").splitlines():
+                        line = line.strip()
+                        if line:
+                            rec = await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+                            records_emitted.append(rec)
+                    if records_emitted:
+                        return records_emitted
+            except asyncio.TimeoutError:
+                try:
+                    proc_init.kill()
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -1205,15 +1224,22 @@ async def send_initial_laptop_logs(count: int = 15):
                     for line in lines:
                         line = line.strip()
                         if line:
-                            await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
-                return
+                            rec = await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+                            records_emitted.append(rec)
+                if records_emitted:
+                    return records_emitted
             except Exception:
                 pass
 
     # 3. Universal OS Process & System Status fallback (Windows, macOS, or unprivileged Linux)
+    # Instant <10ms response using lightweight process status
     if HAS_PSUTIL:
         try:
-            procs = list(psutil.process_iter(['pid', 'name', 'status', 'cpu_percent']))[:count]
+            procs = []
+            for p in psutil.process_iter(['pid', 'name', 'status']):
+                procs.append(p)
+                if len(procs) >= count:
+                    break
             now_str = datetime.datetime.now().strftime("%b %d %H:%M:%S")
             for p in procs:
                 pinfo = p.info
@@ -1221,9 +1247,12 @@ async def send_initial_laptop_logs(count: int = 15):
                 pid = pinfo.get('pid') or 0
                 status = pinfo.get('status') or 'running'
                 line = f"{now_str} {LOCAL_HOSTNAME} system[{pid}]: Service '{pname}' status={status}"
-                await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+                rec = await process_and_broadcast(f"[HOST:{LOCAL_HOSTNAME}] {line}", source_type="laptop_host")
+                records_emitted.append(rec)
         except Exception:
             pass
+
+    return records_emitted
 
 
 async def host_log_tailer():
@@ -1452,9 +1481,9 @@ def get_host_stream_status(user: AuthUser = Security(require_role(["admin", "ope
 @app.post("/api/host-stream/toggle")
 async def toggle_host_stream(
     request: Request,
-    user: AuthUser = Security(require_role(["admin", "operator"]))
+    user: AuthUser = Security(require_role(["admin"]))
 ):
-    """Enable or disable streaming laptop logs to dashboard (Admin & Operator)."""
+    """Enable or disable streaming laptop logs to dashboard (Admin Only)."""
     global HOST_LOGS_ACTIVE, current_journal_proc
     try:
         body = await request.json()
@@ -1469,6 +1498,7 @@ async def toggle_host_stream(
     action_str = "RESUME_HOST_STREAM" if HOST_LOGS_ACTIVE else "PAUSE_HOST_STREAM"
     storage_archive.ingest_audit(user.username, user.role, action_str, "host-stream", 200, f"Host stream set to {HOST_LOGS_ACTIVE}")
     
+    initial_logs = []
     if not HOST_LOGS_ACTIVE:
         if current_journal_proc and current_journal_proc.returncode is None:
             try:
@@ -1478,13 +1508,27 @@ async def toggle_host_stream(
             current_journal_proc = None
     else:
         # Instantly emit recent journal batch so user gets immediate visual feedback and logs populate instantly
-        asyncio.create_task(send_initial_laptop_logs(15))
+        try:
+            initial_logs = await send_initial_laptop_logs(15)
+        except Exception as e:
+            print(f"[ULPF HOST AGENT] Initial log extraction error: {e}")
 
     return {
         "hostname": LOCAL_HOSTNAME,
         "active": HOST_LOGS_ACTIVE,
         "message": f"Laptop log streaming {'resumed' if HOST_LOGS_ACTIVE else 'paused'}",
+        "initial_logs": initial_logs,
     }
+
+
+@app.get("/api/host-stream/recent")
+async def get_recent_host_logs(
+    count: int = 15,
+    user: AuthUser = Security(require_role(["admin", "operator"]))
+):
+    """Fetches real-time laptop logs on-demand for zero-latency dashboard backfill."""
+    logs = await send_initial_laptop_logs(min(max(count, 1), 50))
+    return {"status": "success", "count": len(logs), "records": logs}
 
 
 @app.post("/api/enterprise-stream/toggle")
@@ -1717,8 +1761,16 @@ if os.path.exists(FRONTEND_DIST):
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if full_path and os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
-        # Return JSON status only if explicitly requesting json or not a browser
+        # Return JSON status if client requests application/json or is test client without text/html
         accept = request.headers.get("accept", "")
+        if "application/json" in accept or "text/html" not in accept:
+            return {
+                "status": "online",
+                "service": "ULPF Enterprise Stream Server",
+                "version": "2.0.0",
+                "active_subscribers": len(subscribers),
+                "threat_intel_entries": len(THREAT_INTEL),
+            }
         index_file = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)

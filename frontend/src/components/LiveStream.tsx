@@ -599,12 +599,21 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
                   <td className="py-2.5 px-3.5 whitespace-nowrap">
                     <div className="text-slate-900 dark:text-slate-100 font-bold text-xs flex items-center space-x-1.5">
                       <span>{timeString}</span>
-                      <span 
-                        title="Live verified wire-level ingestion event"
-                        className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 tracking-wider shadow-xs"
-                      >
-                        WIRE
-                      </span>
+                      {isLaptopEvent ? (
+                        <span 
+                          title="Real-time live laptop host log from local machine"
+                          className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 tracking-wider shadow-xs"
+                        >
+                          HOST
+                        </span>
+                      ) : (
+                        <span 
+                          title="Live verified wire-level ingestion event"
+                          className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 tracking-wider shadow-xs"
+                        >
+                          WIRE
+                        </span>
+                      )}
                       {repeatCount > 1 && (
                         <span 
                           title={`${repeatCount} identical log entries collapsed`}
